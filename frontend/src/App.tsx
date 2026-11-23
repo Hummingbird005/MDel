@@ -6,11 +6,16 @@ import { hasRole, useCurrentUser, type AppRole, type CurrentUser } from './auth/
 import { AppLayout } from './layout/AppLayout'
 import { AdminPage } from './pages/admin/AdminPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { DelegationDetailPage } from './pages/delegations/DelegationDetailPage'
+import { DelegationFormPage } from './pages/delegations/DelegationFormPage'
 import { MessagePage, PlaceholderPage } from './pages/PlaceholderPage'
 
-function RequireRole({ user, role, children }: { user: CurrentUser; role: AppRole; children: ReactNode }) {
-  return hasRole(user, role) ? children : <MessagePage messageKey="common.forbidden" />
+function RequireRole({ user, role, children }: { user: CurrentUser; role: AppRole | AppRole[]; children: ReactNode }) {
+  const roles = Array.isArray(role) ? role : [role]
+  return roles.some((r) => hasRole(user, r)) ? children : <MessagePage messageKey="common.forbidden" />
 }
+
+const viewer: AppRole[] = ['Admin', 'Approver']
 
 export default function App() {
   const { data: user, isLoading, isError } = useCurrentUser()
@@ -42,12 +47,35 @@ export default function App() {
   return (
     <Routes>
       <Route element={<AppLayout user={user} />}>
-        <Route index element={<DashboardPage />} />
+        <Route
+          index
+          element={
+            <RequireRole user={user} role={viewer}>
+              <DashboardPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="delegations/new"
           element={
             <RequireRole user={user} role="Admin">
-              <PlaceholderPage titleKey="nav.newDelegation" />
+              <DelegationFormPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="delegations/:id"
+          element={
+            <RequireRole user={user} role={viewer}>
+              <DelegationDetailPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="delegations/:id/edit"
+          element={
+            <RequireRole user={user} role="Admin">
+              <DelegationFormPage />
             </RequireRole>
           }
         />

@@ -6,6 +6,12 @@ public static class AppRoles
     public const string Approver = "Approver";
 }
 
+public static class AppPolicies
+{
+    /// <summary>Administratori sau aprobatori – pot vedea delegările.</summary>
+    public const string Viewer = "Viewer";
+}
+
 public static class AuditActions
 {
     public const string Login = "Auth.Login";

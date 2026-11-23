@@ -47,6 +47,13 @@ public class Delegation
     public DateTime? StoppedUtc { get; set; }
     public string? StopReason { get; set; }
 
+    /// <summary>
+    /// Valoarea ForwardingAddress citită din Exchange imediat după aplicare (format canonic).
+    /// La final se restaurează forwardul anterior doar dacă valoarea curentă este încă aceasta
+    /// (nu suprascriem o modificare făcută manual între timp).
+    /// </summary>
+    public string? AppliedForwardingAddress { get; set; }
+
     public DateTime? ExchangeAppliedUtc { get; set; }
     public DateTime? ExchangeRemovedUtc { get; set; }
     public string? LastError { get; set; }

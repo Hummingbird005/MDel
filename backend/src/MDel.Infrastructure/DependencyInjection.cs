@@ -1,5 +1,6 @@
 using MDel.Application.Abstractions;
 using MDel.Infrastructure.Auditing;
+using MDel.Infrastructure.Delegations;
 using MDel.Infrastructure.Integrations;
 using MDel.Infrastructure.Persistence;
 using MDel.Infrastructure.Settings;
@@ -30,6 +31,10 @@ public static class DependencyInjection
             configuration.GetValue<long>("Uploads:MaxRequestBodyBytes", 110L * 1024 * 1024)));
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<AttachmentStorageProbe>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<ForwardingManager>();
+        services.AddScoped<DelegationService>();
+        services.AddScoped<AttachmentService>();
 
         if (configuration.GetValue("Integrations:UseFakes", false))
         {

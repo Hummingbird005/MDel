@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,11 +22,21 @@ builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = maxReq
 
 // ---------------------------------------------------------------- Servicii
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Doar Development: bază in-memory pentru a încerca interfața fără SQL Server.
+var useInMemoryDb = builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Database:UseInMemory", false);
+if (useInMemoryDb)
+{
+    builder.Services.RemoveAll<Microsoft.EntityFrameworkCore.DbContextOptions<MDel.Infrastructure.Persistence.MDelDbContext>>();
+    builder.Services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<MDel.Infrastructure.Persistence.MDelDbContext>>();
+    builder.Services.AddDbContext<MDel.Infrastructure.Persistence.MDelDbContext>(o => o.UseInMemoryDatabase("mdel-dev"));
+}
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddProblemDetails();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 // ---------------------------------------------------------------- Data Protection
 // Cheile criptează parolele din AppSettings. Trebuie persistate într-un folder stabil
@@ -62,6 +74,7 @@ builder.Services.AddTransient<IClaimsTransformation, AdGroupClaimsTransformation
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AppRoles.Admin, p => p.RequireRole(AppRoles.Admin))
     .AddPolicy(AppRoles.Approver, p => p.RequireRole(AppRoles.Approver))
+    .AddPolicy(AppPolicies.Viewer, p => p.RequireRole(AppRoles.Admin, AppRoles.Approver))
     .SetFallbackPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser().Build());
 
@@ -76,6 +89,12 @@ builder.Services.Configure<RequestLocalizationOptions>(o =>
 
 var app = builder.Build();
 
+if (useInMemoryDb)
+{
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<MDel.Infrastructure.Persistence.MDelDbContext>().Database.EnsureCreated();
+}
+
 // ---------------------------------------------------------------- Pipeline
 app.UseExceptionHandler();
 app.UseStatusCodePages();
@@ -86,6 +105,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.Use((context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    return next(context);
+});
 app.UseRequestLocalization();
 
 // SPA-ul React (build-ul din frontend copiat în wwwroot la publicare).

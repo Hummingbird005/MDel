@@ -68,6 +68,10 @@ utilizatorul și grupurile AD vin din `appsettings.Development.json`, iar header
 și `X-Dev-Groups` (listă separată prin virgulă sau `none`) permit schimbarea utilizatorului și a grupurilor.
 AD, Exchange și SMTP sunt înlocuite de implementări in-memory (`Integrations:UseFakes = true`).
 
+Pentru a încerca interfața **fără SQL Server**: `Database__UseInMemory=true dotnet run --project src/MDel.Api`
+(bază in-memory, doar în Development; datele se pierd la oprire). Setați apoi calea de fișiere în
+Administrare → Fișiere.
+
 ## Integrări (producție)
 
 | Sistem | Implementare | Configurare (Administrare) | Test |

@@ -92,6 +92,7 @@ public class MDelDbContext(DbContextOptions<MDelDbContext> options) : DbContext(
             e.Property(x => x.RequiresApproval).HasDefaultValue(true);
             e.Property(x => x.KeepCopyInSource).HasDefaultValue(true);
             e.Property(x => x.PreviousForwardingAddress).HasMaxLength(512);
+            e.Property(x => x.AppliedForwardingAddress).HasMaxLength(512);
             e.Property(x => x.Notes).HasMaxLength(2000);
             e.Property(x => x.RejectReason).HasMaxLength(1000);
             e.Property(x => x.StopReason).HasMaxLength(1000);
