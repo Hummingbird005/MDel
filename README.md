@@ -99,6 +99,24 @@ Administrare → Fișiere.
   **grupul de informare** (utilizatori adăugați din Setări → Grup de informare).
 - `General.BaseUrl` (Setări → General) adaugă în emailuri link direct către delegare.
 
+## Activare și expirare automată (etapa 4)
+
+Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:IntervalSeconds` (implicit 30 s):
+
+| Situație | Acțiune |
+|---|---|
+| Programată, data de început atinsă | forward aplicat în Exchange → **Activă**, notificare către administratori, sursă, destinatar, grup de informare |
+| Activă, data de sfârșit atinsă | forward eliminat și cel anterior restaurat → **Expirată**, notificare către aceiași destinatari |
+| În aprobare / programată, sfârșit atins fără activare | → **Expirată**, fără operații în Exchange |
+| Eroare Exchange | → **Eroare**, administratorii sunt anunțați o dată; reîncercare la fiecare 10 minute |
+
+- Reconcilierea (`Scheduler:ReconcileMinutes`, implicit 60) verifică în Exchange că forwardurile active sunt încă
+  cele aplicate de aplicație; o modificare manuală apare ca avertisment pe delegare, în audit și pe email la administratori.
+- Retenția rulează zilnic: fișierele și înregistrările de audit mai vechi decât perioada setată (implicit 365 de zile) se șterg.
+- Starea e în baza de date: după un restart, tot ce a devenit scadent între timp se procesează la prima rulare.
+- Precizie: ± intervalul de rulare (30 s). Aplicația trebuie să ruleze într-o singură instanță; pe IIS setați
+  **Start Mode = AlwaysRunning** și **Idle Time-out = 0** pe application pool, ca jobul să ruleze și fără trafic.
+
 ## Interfață
 
 - Light / dark mode (buton în header, alegerea se păstrează în browser; implicit urmează sistemul).

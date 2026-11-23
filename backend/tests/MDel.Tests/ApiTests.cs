@@ -11,13 +11,15 @@ using Microsoft.Extensions.Hosting;
 
 namespace MDel.Tests;
 
-public sealed class MDelApiFactory : WebApplicationFactory<Program>
+public class MDelApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbName = Guid.NewGuid().ToString();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        // Joburile automate rulează doar când testul le cheamă explicit (cu ceasul de test).
+        builder.UseSetting("Scheduler:Enabled", "false");
         builder.ConfigureServices(services =>
         {
             // Înlocuim SQL Server cu o bază in-memory pentru testele de API.

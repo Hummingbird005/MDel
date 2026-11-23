@@ -10,7 +10,8 @@ public class StateMachineTests
     [InlineData(DelegationStatus.PendingApproval, DelegationStatus.Scheduled, true)]
     [InlineData(DelegationStatus.PendingApproval, DelegationStatus.Active, true)]
     [InlineData(DelegationStatus.PendingApproval, DelegationStatus.Rejected, true)]
-    [InlineData(DelegationStatus.PendingApproval, DelegationStatus.Expired, false)]
+    [InlineData(DelegationStatus.PendingApproval, DelegationStatus.Expired, true)] // neaprobată până la sfârșit
+    [InlineData(DelegationStatus.PendingApproval, DelegationStatus.Failed, false)]
     [InlineData(DelegationStatus.Scheduled, DelegationStatus.Active, true)]
     [InlineData(DelegationStatus.Scheduled, DelegationStatus.PendingApproval, true)]
     [InlineData(DelegationStatus.Scheduled, DelegationStatus.Rejected, false)]
