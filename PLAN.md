@@ -115,3 +115,19 @@ Destinatari: grup aprobatori, grup admini, utilizator sursă, destinatar și **g
 ## 11. Puncte deschise
 
 Niciunul blocant. Rămâne de validat pe Exchange real (de către utilizator): comportamentul forwardului, restaurarea valorii anterioare și politicile de transport.
+
+## 12. Posibile extinderi (neprogramate)
+
+**Informarea utilizatorului al cărui email este redirecționat** – discutat pe 2026-11-23, amânat.
+Exchange 2016 / Outlook nu permit o bandă cu text personalizat (ex. roșie, cu perioada delegării) afișată
+proprietarului căsuței. Variantele posibile, de activat separat din Setări → Exchange:
+
+| Variantă | Ce vede cine | Limitări |
+|---|---|---|
+| **Răspunsuri automate** programate pe perioada delegării (`Set-MailboxAutoReplyConfiguration`, Scheduled) | Proprietarul: banda Outlook/OWA „Se trimit răspunsuri automate” (galbenă, text fix). Expeditorii: răspuns automat cu perioada și destinatarul forwardului | Text și culoare ale benzii fixe; expeditorii primesc răspuns automat; răspunsurile automate existente trebuie salvate și restaurate la final |
+| **MailTip** pe perioada delegării (`Set-Mailbox -MailTip`) | Expeditorii: bandă în fereastra de compunere, cu text configurabil (perioada, destinatarul) | Nu o vede proprietarul căsuței |
+| Add-in Outlook | Mesaj (inclusiv tip eroare/roșu) în panoul unui mesaj deschis | Pe Exchange 2016 nu se afișează automat și permanent; efort mare, rezultat incert – nerecomandat |
+
+Pentru variantele 1 și 2: texte editabile în română (ca șabloanele de email), activare/oprire odată cu forwardul,
+restaurarea stării anterioare, iar rolul RBAC (`scripts/New-MDelRbacRole.ps1`) și smoke-test-ul extinse cu
+`Set-MailboxAutoReplyConfiguration` și parametrul `-MailTip`.
