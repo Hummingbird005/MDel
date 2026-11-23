@@ -15,7 +15,7 @@ namespace MDel.Api.Auth;
 /// </summary>
 public sealed class AdGroupClaimsTransformation(
     IServiceProvider services,
-    SettingsCache settings,
+    ISettingsService settings,
     IConfiguration configuration,
     IMemoryCache cache) : IClaimsTransformation
 {
@@ -31,7 +31,9 @@ public sealed class AdGroupClaimsTransformation(
             return principal;
         }
 
-        var cacheKey = $"mdel.principal:{loginName.ToLowerInvariant()}";
+        // Cheia include grupurile simulate (Development), ca schimbarea lor să nu returneze roluri vechi.
+        var devGroups = string.Join(",", principal.FindAll(GroupClaimType).Select(c => c.Value).Order());
+        var cacheKey = $"mdel.principal:{loginName.ToLowerInvariant()}|{devGroups}";
         var cached = await cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);

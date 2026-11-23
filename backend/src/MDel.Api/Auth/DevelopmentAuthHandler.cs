@@ -7,7 +7,7 @@ namespace MDel.Api.Auth;
 
 /// <summary>
 /// Autentificare DOAR pentru dezvoltare (fără domeniu AD): autentifică fiecare cerere
-/// ca utilizatorul din "Authentication:Development". Poate fi suprascris cu headerul X-Dev-User.
+/// ca utilizatorul din "Authentication:Development". Poate fi suprascris cu headerele X-Dev-User / X-Dev-Groups.
 /// Este refuzată la pornire în afara mediului Development.
 /// </summary>
 public sealed class DevelopmentAuthHandler(
@@ -23,7 +23,13 @@ public sealed class DevelopmentAuthHandler(
     {
         var section = configuration.GetSection("Authentication:Development");
         var user = Request.Headers["X-Dev-User"].FirstOrDefault() ?? section["User"] ?? "CONTOSO\\dev.admin";
-        var groups = section.GetSection("Groups").Get<string[]>() ?? [];
+        // X-Dev-Groups: listă separată prin virgulă; "none" = fără grupuri (testare utilizator fără rol).
+        var groupsHeader = Request.Headers["X-Dev-Groups"].FirstOrDefault();
+        var groups = groupsHeader is null
+            ? section.GetSection("Groups").Get<string[]>() ?? []
+            : groupsHeader.Equals("none", StringComparison.OrdinalIgnoreCase)
+                ? []
+                : groupsHeader.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
         var claims = new List<Claim> { new(ClaimTypes.Name, user) };
         // Simulăm membership-ul AD: grupurile devin claim-uri de tip GroupName,

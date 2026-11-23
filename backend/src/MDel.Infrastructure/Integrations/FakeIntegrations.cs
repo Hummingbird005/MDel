@@ -42,6 +42,9 @@ public sealed class FakeExchangeService(ILogger<FakeExchangeService> logger) : I
     public Task<MailboxForwarding> GetForwardingAsync(string mailboxIdentity, CancellationToken ct) =>
         Task.FromResult(_state.GetValueOrDefault(mailboxIdentity, new MailboxForwarding(null, false)));
 
+    /// <summary>Pentru teste: simulează un forward preexistent.</summary>
+    public void Seed(string mailbox, MailboxForwarding forwarding) => _state[mailbox] = forwarding;
+
     public Task SetForwardingAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward, CancellationToken ct)
     {
         logger.LogInformation("[FAKE] Set-Mailbox {Mailbox} -ForwardingAddress {Target} -DeliverToMailboxAndForward {Keep}",

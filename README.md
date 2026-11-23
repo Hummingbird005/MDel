@@ -10,10 +10,11 @@ Planul complet: [PLAN.md](PLAN.md).
 backend/                     ASP.NET Core (.NET 10)
   src/MDel.Domain            entități + enum-uri (fără atribute EF)
   src/MDel.Application       interfețe: IDirectoryService, IExchangeService, IMailService, IAuditService, ICurrentUser
-  src/MDel.Infrastructure    EF Core (MDelDbContext + migrații), audit, integrări (fake în etapa 0)
+  src/MDel.Infrastructure    EF Core (MDelDbContext + migrații), audit, setări, integrări AD/Exchange/SMTP
   src/MDel.Api               Web API, autentificare AD, middleware audit, servire SPA
   tests/MDel.Tests           xUnit (model EF, API)
 frontend/                    React + TypeScript (Vite), MUI, React Query, i18next (ro/en)
+scripts/                     PowerShell: rol RBAC minim + smoke-test Exchange (vezi scripts/README.md)
 ```
 
 ## Baza de date (EF Core, code-first)
@@ -64,8 +65,24 @@ Cerințe: .NET 10 SDK, Node 22, SQL Server.
 
 În **Development**, autentificarea este simulată (`Authentication:Mode = Development`):
 utilizatorul și grupurile AD vin din `appsettings.Development.json`, iar headerul `X-Dev-User`
-permite schimbarea utilizatorului. AD, Exchange și SMTP sunt înlocuite de implementări
-in-memory (`Integrations:UseFakes = true`) până la etapa 1.
+și `X-Dev-Groups` (listă separată prin virgulă sau `none`) permit schimbarea utilizatorului și a grupurilor.
+AD, Exchange și SMTP sunt înlocuite de implementări in-memory (`Integrations:UseFakes = true`).
+
+## Integrări (producție)
+
+| Sistem | Implementare | Configurare (Administrare) | Test |
+|---|---|---|---|
+| Active Directory | LDAP – `System.DirectoryServices.Protocols`, Negotiate cu sign & seal sau LDAPS | domeniu, server, Base DN, cont de serviciu | bind + citire Base DN |
+| Exchange 2016 | PowerShell remoting (`/PowerShell/`, Kerberos) – `Get-Mailbox`, `Set-Mailbox`, `Get-Recipient` | URI, cont de serviciu, copie în sursă | `Get-Recipient -ResultSize 1` + citire forward |
+| SMTP | MailKit | server, port, TLS, utilizator, expeditor | conectare + email de test opțional |
+| Fișiere | disc local / share UNC | cale, limită MB, extensii | scriere/citire/ștergere fișier de probă |
+
+- Parolele din setări sunt criptate cu ASP.NET Core Data Protection. Cheile se păstrează în
+  `DataProtection:KeysPath` (implicit `C:\ProgramData\MDel\keys`, protejate cu DPAPI la nivel de mașină).
+  Contul app pool-ului trebuie să aibă drept de scriere acolo. Dacă cheile se pierd, parolele trebuie reintroduse.
+- Fără cont de serviciu completat, AD și Exchange folosesc identitatea app pool-ului (Kerberos).
+- Contul pentru Exchange are nevoie de rolul RBAC creat cu `scripts/New-MDelRbacRole.ps1`.
+- Forwardul acceptă doar destinatari interni (`UserMailbox`, `SharedMailbox`, `LinkedMailbox`).
 
 ## Autentificare și roluri
 

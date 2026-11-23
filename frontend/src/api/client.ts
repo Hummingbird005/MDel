@@ -3,12 +3,13 @@
 
 export class ApiError extends Error {
   readonly status: number
-  readonly detail?: string
+  /** Erori de validare per câmp (ValidationProblemDetails.errors). */
+  readonly errors?: Record<string, string[]>
 
-  constructor(status: number, message: string, detail?: string) {
+  constructor(status: number, message: string, errors?: Record<string, string[]>) {
     super(message)
     this.status = status
-    this.detail = detail
+    this.errors = errors
   }
 }
 
@@ -25,14 +26,16 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
   })
 
   if (!response.ok) {
-    let detail: string | undefined
+    let message = `HTTP ${response.status}`
+    let errors: Record<string, string[]> | undefined
     try {
       const problem = await response.json()
-      detail = problem.detail ?? problem.title
+      message = problem.detail ?? problem.title ?? message
+      errors = problem.errors
     } catch {
       // răspuns fără corp JSON
     }
-    throw new ApiError(response.status, `HTTP ${response.status}`, detail)
+    throw new ApiError(response.status, message, errors)
   }
 
   if (response.status === 204) return undefined as T

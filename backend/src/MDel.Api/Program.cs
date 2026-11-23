@@ -5,6 +5,7 @@ using MDel.Application.Common;
 using MDel.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Negotiate;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Localization;
 
@@ -24,6 +25,20 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
+
+// ---------------------------------------------------------------- Data Protection
+// Cheile criptează parolele din AppSettings. Trebuie persistate într-un folder stabil
+// (altfel, la reinstalare, parolele salvate nu mai pot fi decriptate și trebuie reintroduse).
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("MDel");
+var keysPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(keysPath))
+{
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+    if (OperatingSystem.IsWindows())
+    {
+        dataProtection.ProtectKeysWithDpapi(protectToLocalMachine: true);
+    }
+}
 
 // ---------------------------------------------------------------- Autentificare AD
 var authMode = builder.Configuration["Authentication:Mode"] ?? "Negotiate";
@@ -78,8 +93,9 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseAuthentication();
-app.UseAuthorization();
+// Auditul înconjoară autorizarea, ca să prindă și cererile refuzate (401/403).
 app.UseMiddleware<AuditMiddleware>();
+app.UseAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapControllers();

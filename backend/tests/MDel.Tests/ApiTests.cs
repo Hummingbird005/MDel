@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace MDel.Tests;
 
@@ -29,6 +30,15 @@ public sealed class MDelApiFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<MDelDbContext>(o => o.UseInMemoryDatabase(_dbName));
         });
+    }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+        // Aplică HasData (setările implicite) în baza in-memory.
+        using var scope = host.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<MDelDbContext>().Database.EnsureCreated();
+        return host;
     }
 
     public T WithDb<T>(Func<MDelDbContext, T> action)

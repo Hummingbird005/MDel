@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Route, Routes } from 'react-router-dom'
 import { hasRole, useCurrentUser, type AppRole, type CurrentUser } from './auth/useCurrentUser'
 import { AppLayout } from './layout/AppLayout'
+import { AdminPage } from './pages/admin/AdminPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { MessagePage, PlaceholderPage } from './pages/PlaceholderPage'
 
@@ -62,7 +63,7 @@ export default function App() {
           path="admin"
           element={
             <RequireRole user={user} role="Admin">
-              <PlaceholderPage titleKey="nav.admin" />
+              <AdminPage />
             </RequireRole>
           }
         />

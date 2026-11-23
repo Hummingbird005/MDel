@@ -15,7 +15,12 @@ public interface IDirectoryService
     Task<ConnectionTestResult> TestConnectionAsync(CancellationToken ct);
 }
 
-public sealed record MailboxForwarding(string? ForwardingAddress, bool DeliverToMailboxAndForward);
+/// <param name="ForwardingAddress">Destinatar intern (ForwardingAddress) – singurul pe care îl gestionează aplicația.</param>
+/// <param name="ForwardingSmtpAddress">Forward SMTP setat de altcineva (ex. din OWA); doar informativ.</param>
+public sealed record MailboxForwarding(
+    string? ForwardingAddress,
+    bool DeliverToMailboxAndForward,
+    string? ForwardingSmtpAddress = null);
 
 /// <summary>
 /// Operații Exchange 2016 pentru forward intern (Set-Mailbox -ForwardingAddress).

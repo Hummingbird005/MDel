@@ -2,6 +2,7 @@ using MDel.Application.Abstractions;
 using MDel.Infrastructure.Auditing;
 using MDel.Infrastructure.Integrations;
 using MDel.Infrastructure.Persistence;
+using MDel.Infrastructure.Settings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +26,10 @@ public static class DependencyInjection
 
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<UserProvisioningService>();
-        services.AddSingleton<SettingsCache>();
+        services.AddSingleton(new SettingsValidator(
+            configuration.GetValue<long>("Uploads:MaxRequestBodyBytes", 110L * 1024 * 1024)));
+        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<AttachmentStorageProbe>();
 
         if (configuration.GetValue("Integrations:UseFakes", false))
         {
@@ -35,9 +39,9 @@ public static class DependencyInjection
         }
         else
         {
-            // Implementările reale (LDAP, Exchange PowerShell, SMTP) se adaugă în etapa 1.
-            throw new NotSupportedException(
-                "Real AD/Exchange/SMTP integrations arrive in stage 1. Set Integrations:UseFakes=true for now.");
+            services.AddSingleton<IDirectoryService, LdapDirectoryService>();
+            services.AddSingleton<IExchangeService, ExchangePowerShellService>();
+            services.AddSingleton<IMailService, SmtpMailService>();
         }
 
         return services;
