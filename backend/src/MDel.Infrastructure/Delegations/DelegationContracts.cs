@@ -20,12 +20,23 @@ public sealed record DelegationListItem(
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
 
+public enum DelegationSort { Default, Start, End, Created, Id }
+
+/// <param name="FromUtc">Împreună cu ToUtc: delegările a căror perioadă se suprapune cu intervalul.</param>
 public sealed record DelegationQuery(
     DelegationStatus[]? Statuses = null,
     string? Search = null,
     bool? KeepCopy = null,
     int Page = 1,
-    int PageSize = 25);
+    int PageSize = 25,
+    DelegationSort Sort = DelegationSort.Default,
+    bool Descending = false,
+    DateTime? FromUtc = null,
+    DateTime? ToUtc = null);
+
+public enum UpcomingEventType { Activation, Expiration }
+
+public sealed record UpcomingEvent(UpcomingEventType Type, DateTime AtUtc, DelegationListItem Delegation);
 
 public sealed record AttachmentDto(
     int Id,

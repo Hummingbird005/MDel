@@ -141,16 +141,45 @@ export interface SourceCheck {
   openDelegations: DelegationListItem[]
 }
 
+export type SortKey = 'Default' | 'Start' | 'End' | 'Created' | 'Id'
+
+export interface ListParams {
+  status?: DelegationStatus[]
+  search?: string
+  keepCopy?: boolean
+  sort?: SortKey
+  desc?: boolean
+  fromUtc?: string
+  toUtc?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface UpcomingEvent {
+  type: 'Activation' | 'Expiration'
+  atUtc: string
+  delegation: DelegationListItem
+}
+
+function toQuery(p: ListParams): URLSearchParams {
+  const q = new URLSearchParams()
+  p.status?.forEach((s) => q.append('status', s))
+  if (p.keepCopy !== undefined) q.set('keepCopy', String(p.keepCopy))
+  if (p.search) q.set('search', p.search)
+  if (p.sort && p.sort !== 'Default') q.set('sort', p.sort)
+  if (p.desc) q.set('desc', 'true')
+  if (p.fromUtc) q.set('from', p.fromUtc)
+  if (p.toUtc) q.set('to', p.toUtc)
+  if (p.page !== undefined) q.set('page', String(p.page))
+  if (p.pageSize !== undefined) q.set('pageSize', String(p.pageSize))
+  return q
+}
+
 export const delegationsApi = {
-  list: (params: { status?: DelegationStatus[]; search?: string; keepCopy?: boolean; page?: number; pageSize?: number }) => {
-    const q = new URLSearchParams()
-    params.status?.forEach((s) => q.append('status', s))
-    if (params.keepCopy !== undefined) q.set('keepCopy', String(params.keepCopy))
-    if (params.search) q.set('search', params.search)
-    q.set('page', String(params.page ?? 1))
-    q.set('pageSize', String(params.pageSize ?? 25))
-    return api.get<PagedResult<DelegationListItem>>(`/api/delegations?${q}`)
-  },
+  list: (params: ListParams) => api.get<PagedResult<DelegationListItem>>(`/api/delegations?${toQuery(params)}`),
+  /** URL de descărcare – browserul trimite autentificarea Windows, ca la orice link. */
+  exportUrl: (params: ListParams) => `/api/delegations/export?${toQuery({ ...params, page: undefined, pageSize: undefined })}`,
+  upcoming: (days = 7) => api.get<UpcomingEvent[]>(`/api/delegations/upcoming?days=${days}`),
   stats: () => api.get<DelegationStats>('/api/delegations/stats'),
   approve: (id: number, rowVersion: string) => api.post<DelegationDetail>(`/api/delegations/${id}/approve`, { rowVersion }),
   reject: (id: number, reason: string, rowVersion: string) =>

@@ -1,35 +1,26 @@
-import { ChevronDown, ChevronLeft, ChevronRight, Ban, Filter, Inbox, Paperclip, Pencil } from 'lucide-react'
+import { Ban, CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Filter, Inbox, Paperclip, Pencil, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import { delegationsApi, type DelegationDetail, type DelegationListItem, type DelegationStatus, type UserRef } from '../../api/delegations'
+import { delegationsApi, type DelegationDetail, type DelegationListItem, type UserRef } from '../../api/delegations'
 import { ForwardModeBadge, StatusBadge } from '../../components/ui/badges'
 import { Avatar, EmptyState, IconButton } from '../../components/ui/primitives'
 import { cx } from '../../lib/cx'
 import { DAY_MS, formatDate, formatTime } from '../../lib/format'
 import { DecisionDialog } from './DecisionDialogs'
 import { useDelegationDrawer } from './DelegationDrawer'
+import { sortOptions, statusFilterMap, type ListFilters, type ModeFilter, type StatusFilter } from './filters'
 
-export type StatusFilter = 'all' | 'active' | 'scheduled' | 'pending' | 'expired' | 'other'
-export type ModeFilter = 'all' | 'copy' | 'forwardOnly'
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const statusFilterMap: Record<StatusFilter, DelegationStatus[] | undefined> = {
-  all: undefined,
-  active: ['Active'],
-  scheduled: ['Scheduled'],
-  pending: ['PendingApproval'],
-  expired: ['Expired'],
-  other: ['Stopped', 'Rejected', 'Failed'],
-}
 
 interface Props {
   rows: DelegationListItem[]
   loading: boolean
-  status: StatusFilter
-  onStatus: (s: StatusFilter) => void
-  mode: ModeFilter
-  onMode: (m: ModeFilter) => void
+  filters: ListFilters
+  onFilter: (key: keyof ListFilters, value: string) => void
+  onClear?: () => void
+  hasFilters?: boolean
+  /** Afișează și sortarea și intervalul de date (lista completă). */
+  advanced?: boolean
   canManage: boolean
   footer?: React.ReactNode
 }
@@ -73,7 +64,8 @@ function PeriodCell({ d }: { d: DelegationListItem }) {
   )
 }
 
-export function DelegationTable({ rows, loading, status, onStatus, mode, onMode, canManage, footer }: Props) {
+export function DelegationTable({ rows, loading, filters, onFilter, onClear, hasFilters, advanced, canManage, footer }: Props) {
+  const { status, mode } = filters
   const { t } = useTranslation()
   const navigate = useNavigate()
   const drawer = useDelegationDrawer()
@@ -95,40 +87,74 @@ export function DelegationTable({ rows, loading, status, onStatus, mode, onMode,
 
   return (
     <section className="min-w-0 rounded-xl bg-card ring-1 ring-line" aria-label={t('nav.delegations')}>
-      <div className="flex flex-col gap-3 border-b border-line p-3 md:flex-row md:items-center">
-        <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label={t('table.statusFilter')}>
-          {(Object.keys(statusFilterMap) as StatusFilter[]).map((s) => (
-            <button
-              key={s}
-              role="tab"
-              aria-selected={status === s}
-              onClick={() => onStatus(s)}
-              className={cx(
-                'h-8 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition-colors',
-                status === s ? 'bg-fg text-bg' : 'text-muted hover:bg-subtle hover:text-fg',
-              )}
-            >
-              {t(`dashboard.${s}`)}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 md:ml-auto">
-          <Filter size={14} className="text-muted" aria-hidden="true" />
-          <div className="relative">
-            <select
-              id="mode-filter"
-              value={mode}
-              aria-label={t('table.modeFilter')}
-              onChange={(e) => onMode(e.target.value as ModeFilter)}
-              className="h-8 appearance-none rounded-lg bg-card pl-2.5 pr-8 text-sm text-fg ring-1 ring-inset ring-line focus:outline-none focus:ring-accent"
-            >
+      <div className="flex flex-col gap-3 border-b border-line p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label={t('table.statusFilter')}>
+            {(Object.keys(statusFilterMap) as StatusFilter[]).map((s) => (
+              <button
+                key={s}
+                role="tab"
+                aria-selected={status === s}
+                onClick={() => onFilter('status', s)}
+                className={cx(
+                  'h-8 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition-colors',
+                  status === s ? 'bg-fg text-bg' : 'text-muted hover:bg-subtle hover:text-fg',
+                )}
+              >
+                {t(`dashboard.${s}`)}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+            <Filter size={14} className="text-muted" aria-hidden="true" />
+            <Select id="mode-filter" label={t('table.modeFilter')} value={mode} onChange={(v) => onFilter('mode', v as ModeFilter)}>
               <option value="all">{t('table.allModes')}</option>
               <option value="copy">{t('mode.keepCopy')}</option>
               <option value="forwardOnly">{t('mode.forwardOnly')}</option>
-            </select>
-            <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
+            </Select>
+            {advanced && (
+              <Select id="sort" label={t('table.sort')} value={filters.sort} onChange={(v) => onFilter('sort', v)}>
+                {sortOptions.map((o) => (
+                  <option key={o} value={o}>
+                    {t(`table.sortOptions.${o.replace(':', '_')}`)}
+                  </option>
+                ))}
+              </Select>
+            )}
           </div>
         </div>
+        {advanced && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <CalendarRange size={14} className="text-muted" aria-hidden="true" />
+            <label htmlFor="range-from" className="text-muted">
+              {t('table.periodFrom')}
+            </label>
+            <input
+              id="range-from"
+              type="date"
+              value={filters.from}
+              max={filters.to || undefined}
+              onChange={(e) => onFilter('from', e.target.value)}
+              className="h-8 rounded-lg bg-card px-2 text-sm text-fg ring-1 ring-inset ring-line focus:outline-none focus:ring-accent"
+            />
+            <label htmlFor="range-to" className="text-muted">
+              {t('table.periodTo')}
+            </label>
+            <input
+              id="range-to"
+              type="date"
+              value={filters.to}
+              min={filters.from || undefined}
+              onChange={(e) => onFilter('to', e.target.value)}
+              className="h-8 rounded-lg bg-card px-2 text-sm text-fg ring-1 ring-inset ring-line focus:outline-none focus:ring-accent"
+            />
+            {hasFilters && onClear && (
+              <button onClick={onClear} className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm text-muted hover:bg-subtle hover:text-fg">
+                <X size={14} /> {t('table.clearFilters')}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="relative overflow-x-auto">
@@ -214,6 +240,24 @@ export function DelegationTable({ rows, loading, status, onStatus, mode, onMode,
       {footer && <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5 text-xs text-muted">{footer}</div>}
       {stopping && <DecisionDialog kind="stop" delegation={stopping} onClose={() => setStopping(null)} />}
     </section>
+  )
+}
+
+function Select({ id, label, value, onChange, children }: { id: string; label: string; value: string; onChange: (v: string) => void; children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <select
+        id={id}
+        value={value}
+        aria-label={label}
+        title={label}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8 appearance-none rounded-lg bg-card pl-2.5 pr-8 text-sm text-fg ring-1 ring-inset ring-line focus:outline-none focus:ring-accent"
+      >
+        {children}
+      </select>
+      <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
+    </div>
   )
 }
 

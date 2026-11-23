@@ -273,7 +273,20 @@
     "latest": "Latest {{shown}} of {{total}}",
     "viewAll": "View all",
     "previous": "Previous page",
-    "next": "Next page"
+    "next": "Next page",
+    "sort": "Sort",
+    "sortOptions": {
+      "Default": "Default order",
+      "Start_asc": "Start ↑",
+      "Start_desc": "Start ↓",
+      "End_asc": "End ↑",
+      "End_desc": "End ↓",
+      "Created_desc": "Newest first",
+      "Id_desc": "ID ↓"
+    },
+    "periodFrom": "Period from",
+    "periodTo": "to",
+    "clearFilters": "Clear filters"
   },
   "mode": {
     "keepCopy": "Forward + copy",
@@ -282,7 +295,8 @@
     "forwardOnlyHelp": "Messages reach only the target, no copy in the source mailbox"
   },
   "delegations": {
-    "subtitle": "All forwards, filtered by status and mode"
+    "subtitle": "All forwards, filtered by status and mode",
+    "export": "Export CSV"
   },
   "toast": {
     "updated": "Delegation #{{id}} was updated",
@@ -323,5 +337,15 @@
     "subtitle": "All user and system actions",
     "comingSoon": "The audit screen arrives in stage 6",
     "comingSoonHint": "Actions are already recorded in the database (AuditLogs table)."
+  },
+  "upcoming": {
+    "title": "Next 7 days",
+    "count_one": "{{count}} event",
+    "count_other": "{{count}} events",
+    "empty": "No activations or expirations in the next 7 days",
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "activation": "starts",
+    "expiration": "expires"
   }
 }

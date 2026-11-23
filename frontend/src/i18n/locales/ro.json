@@ -277,7 +277,20 @@
     "latest": "Ultimele {{shown}} din {{total}}",
     "viewAll": "Vezi toate",
     "previous": "Pagina anterioară",
-    "next": "Pagina următoare"
+    "next": "Pagina următoare",
+    "sort": "Sortare",
+    "sortOptions": {
+      "Default": "Sortare implicită",
+      "Start_asc": "Început ↑",
+      "Start_desc": "Început ↓",
+      "End_asc": "Sfârșit ↑",
+      "End_desc": "Sfârșit ↓",
+      "Created_desc": "Cele mai noi",
+      "Id_desc": "ID ↓"
+    },
+    "periodFrom": "Perioadă de la",
+    "periodTo": "până la",
+    "clearFilters": "Resetează filtrele"
   },
   "mode": {
     "keepCopy": "Forward + copie",
@@ -286,7 +299,8 @@
     "forwardOnlyHelp": "Mesajele ajung doar la destinatar, fără copie în căsuța sursă"
   },
   "delegations": {
-    "subtitle": "Toate forward-urile, cu filtrare după stare și mod"
+    "subtitle": "Toate forward-urile, cu filtrare după stare și mod",
+    "export": "Export CSV"
   },
   "toast": {
     "updated": "Delegarea #{{id}} a fost actualizată",
@@ -327,5 +341,16 @@
     "subtitle": "Toate acțiunile utilizatorilor și ale sistemului",
     "comingSoon": "Ecranul de audit vine în etapa 6",
     "comingSoonHint": "Acțiunile sunt deja înregistrate în baza de date (tabela AuditLogs)."
+  },
+  "upcoming": {
+    "title": "Următoarele 7 zile",
+    "count_one": "{{count}} eveniment",
+    "count_few": "{{count}} evenimente",
+    "count_other": "{{count}} de evenimente",
+    "empty": "Nicio activare sau expirare în următoarele 7 zile",
+    "today": "azi",
+    "tomorrow": "mâine",
+    "activation": "se activează",
+    "expiration": "expiră"
   }
 }
