@@ -127,6 +127,17 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
   (`;` + UTF-8 BOM pentru Excel, aceleași filtre ca lista, export auditat). Filtrele sunt în URL, deci link-urile se pot trimite.
 - Adăugarea și editarea se fac într-un panou lateral; oprirea, aprobarea și respingerea cer confirmare.
 
+## Audit și coada de emailuri (etapa 6)
+
+- **Istoric / Audit** (doar administratori): toate acțiunile – login, cereri HTTP de modificare, acces refuzat,
+  delegări, aprobări, operații Exchange (inclusiv cele automate, cu utilizatorul „Sistem”), fișiere, setări,
+  exporturi, retenție. Filtre după interval, utilizator, acțiune (sau grup de acțiuni), rezultat și text;
+  detaliul arată valorile vechi și noi câmp cu câmp (parolele apar mascate). Export CSV (auditat).
+- Din pagina unei delegări, „Istoric audit” deschide auditul filtrat pe acea delegare.
+- **Setări → Notificări email**: mesajele eșuate, în coadă și trimise, cu eroarea și numărul de încercări;
+  „Retrimite” repune un mesaj în coadă (pentru grupuri recitește adresa din setări). Numărul de emailuri
+  eșuate apare lângă „Setări” în meniu.
+
 ## Autentificare și roluri
 
 - Producție: Windows Authentication (Negotiate/Kerberos) pe IIS – vezi `web.config`.

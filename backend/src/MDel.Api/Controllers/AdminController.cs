@@ -117,6 +117,21 @@ public sealed class AdminController(
     public async Task<IActionResult> RemoveInformMember(int memberId, CancellationToken ct) =>
         await informGroup.RemoveAsync(memberId, ct) ? NoContent() : NotFound();
 
+    // ------------------------------------------------------------------ coada de emailuri
+
+    [HttpGet("notifications")]
+    public Task<IReadOnlyList<OutboxItem>> Notifications([FromServices] NotificationAdminService outbox,
+        [FromQuery] OutboxFilter filter = OutboxFilter.Failed, CancellationToken ct = default) =>
+        outbox.ListAsync(filter, ct);
+
+    [HttpGet("notifications/failed-count")]
+    public async Task<int> FailedNotifications([FromServices] NotificationAdminService outbox, CancellationToken ct) =>
+        await outbox.CountFailedAsync(ct);
+
+    [HttpPost("notifications/{id:long}/retry")]
+    public async Task<IActionResult> RetryNotification(long id, [FromServices] NotificationAdminService outbox, CancellationToken ct) =>
+        await outbox.RetryAsync(id, settings, ct) ? NoContent() : NotFound();
+
     /// <summary>Verifică forwardul curent al unei căsuțe (doar citire) – util pentru diagnostic.</summary>
     [HttpGet("exchange/forwarding")]
     public async Task<ActionResult<MailboxForwarding>> GetForwarding([FromQuery] string mailbox, CancellationToken ct)

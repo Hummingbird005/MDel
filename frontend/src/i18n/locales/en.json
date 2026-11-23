@@ -79,7 +79,8 @@
       "Attachments": "Files",
       "Retention": "Retention",
       "General": "General",
-      "InformGroup": "Inform group"
+      "InformGroup": "Inform group",
+      "Notifications": "Email notifications"
     },
     "fields": {
       "Ad_Domain": "AD domain",
@@ -143,7 +144,23 @@
     "informAdd": "Add to group",
     "informUser": "User",
     "informAddButton": "Add",
-    "informAdded": "The user was added to the inform group"
+    "informAdded": "The user was added to the inform group",
+    "failedMails": "Unsent emails",
+    "outbox": {
+      "Failed": "Failed",
+      "Pending": "Queued",
+      "Sent": "Sent",
+      "All": "All"
+    },
+    "outboxHelp": "Latest 200 messages. After fixing the settings (e.g. a group address), press Resend.",
+    "outboxEmpty": "No messages in this category",
+    "recipient": "Recipient",
+    "subject": "Subject",
+    "sentAt": "sent {{when}}",
+    "attempts_one": "{{count}} attempt",
+    "attempts_other": "{{count}} attempts",
+    "retry": "Resend",
+    "mailRetried": "The message was queued again"
   },
   "status": {
     "PendingApproval": "Pending",
@@ -235,7 +252,8 @@
     "uploadFailed": "The delegation was saved, but a file upload failed: {{error}}",
     "approve": "Approve",
     "reject": "Reject",
-    "noAttachments": "No attachments"
+    "noAttachments": "No attachments",
+    "auditTrail": "Audit trail"
   },
   "header": {
     "search": "Search user, email or #id…",
@@ -334,9 +352,72 @@
     "details": "Details"
   },
   "audit": {
-    "subtitle": "All user and system actions",
-    "comingSoon": "The audit screen arrives in stage 6",
-    "comingSoonHint": "Actions are already recorded in the database (AuditLogs table)."
+    "subtitle": "All user and system actions, with old and new values",
+    "from": "From",
+    "to": "To",
+    "user": "User",
+    "action": "Action",
+    "allActions": "All actions",
+    "allInGroup": "{{group}} – all",
+    "result": "Result",
+    "allResults": "All",
+    "search": "Text",
+    "searchPlaceholder": "details, path, IP…",
+    "entityFilter": "{{type}} #{{id}}",
+    "empty": "No entries match the filters",
+    "when": "When",
+    "target": "Target",
+    "details": "Details",
+    "hasChanges": "has old/new values",
+    "actionCode": "Action code",
+    "correlation": "Correlation",
+    "field": "Field",
+    "oldValue": "Before",
+    "newValue": "After",
+    "results": {
+      "Success": "Success",
+      "Failure": "Failed",
+      "Denied": "Denied"
+    },
+    "groups": {
+      "Delegation": "Delegations",
+      "Attachment": "Files",
+      "Settings": "Settings",
+      "Admin": "Connection tests",
+      "InformGroup": "Inform group",
+      "Auth": "Sign-in",
+      "Http": "HTTP requests",
+      "User": "User",
+      "Notification": "Notifications",
+      "Retention": "Retention",
+      "Audit": "Audit"
+    },
+    "actions": {
+      "Auth_Login": "Sign-in",
+      "Http_Request": "HTTP request",
+      "User_LanguageChanged": "Language changed",
+      "Settings_Updated": "Settings changed",
+      "Admin_Test": "{{target}} connection test",
+      "Delegation_Created": "Delegation created",
+      "Delegation_Updated": "Delegation edited",
+      "Delegation_Approved": "Delegation approved",
+      "Delegation_Rejected": "Delegation rejected",
+      "Delegation_Stopped": "Delegation stopped",
+      "Delegation_Activated": "Forward applied in Exchange",
+      "Delegation_ActivationFailed": "Applying the forward failed",
+      "Delegation_ForwardRemoved": "Forward removed from Exchange",
+      "Delegation_RemoveFailed": "Removing the forward failed",
+      "Delegation_DriftDetected": "Forward changed outside the app",
+      "Delegation_Exported": "Delegations exported",
+      "Attachment_Uploaded": "File uploaded",
+      "Attachment_Downloaded": "File downloaded",
+      "Attachment_Deleted": "File deleted",
+      "InformGroup_MemberAdded": "Inform group member added",
+      "InformGroup_MemberRemoved": "Inform group member removed",
+      "Notification_Retried": "Email resent",
+      "Retention_Purged": "Retention purge",
+      "Audit_Exported": "Audit exported"
+    }
   },
   "upcoming": {
     "title": "Next 7 days",

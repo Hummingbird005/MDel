@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlugZap, Search, Trash2, UserPlus, Users } from 'lucide-react'
+import { Mail, PlugZap, RotateCcw, Search, Trash2, UserPlus, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { adminApi, type ConnectionTestResult, type MailboxForwarding, type SettingView, type TestTarget } from '../../api/admin'
+import { Link } from 'react-router-dom'
+import { adminApi, type ConnectionTestResult, type MailboxForwarding, type OutboxFilter, type SettingView, type TestTarget } from '../../api/admin'
 import { ApiError } from '../../api/client'
 import { PageHeader } from '../../components/layout/AppShell'
 import type { PickedUser } from '../../components/pickedUser'
@@ -19,6 +20,7 @@ const tabs: { id: string; test?: TestTarget }[] = [
   { id: 'ActiveDirectory', test: 'ad' },
   { id: 'Groups' },
   { id: 'InformGroup' },
+  { id: 'Notifications' },
   { id: 'Exchange', test: 'exchange' },
   { id: 'Smtp', test: 'smtp' },
   { id: 'Attachments', test: 'storage' },
@@ -68,6 +70,8 @@ export function AdminPage() {
 
       {tab === 'InformGroup' ? (
         <InformGroupPanel />
+      ) : tab === 'Notifications' ? (
+        <NotificationsPanel />
       ) : query.isLoading ? (
         <Spinner />
       ) : query.isError || !query.data ? (
@@ -330,5 +334,99 @@ function InformGroupPanel() {
         </div>
       </Card>
     </div>
+  )
+}
+
+const outboxFilters: OutboxFilter[] = ['Failed', 'Pending', 'Sent', 'All']
+
+/** Coada de emailuri: ce n-a plecat și de ce; retrimitere după corectarea setărilor. */
+function NotificationsPanel() {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [filter, setFilter] = useState<OutboxFilter>('Failed')
+  const items = useQuery({ queryKey: ['admin', 'notifications', filter], queryFn: () => adminApi.notifications(filter), refetchInterval: 30_000 })
+
+  const retry = useMutation({
+    mutationFn: (id: number) => adminApi.retryNotification(id),
+    onSuccess: () => {
+      toast(t('admin.mailRetried'))
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'notifications'] })
+    },
+    onError: (e) => toast((e as Error).message, 'danger'),
+  })
+
+  return (
+    <Card className="min-w-0">
+      <div className="flex flex-wrap items-center gap-1 border-b border-line p-3">
+        {outboxFilters.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            aria-pressed={filter === f}
+            className={cx('h-8 rounded-lg px-3 text-sm font-medium', filter === f ? 'bg-fg text-bg' : 'text-muted hover:bg-subtle hover:text-fg')}
+          >
+            {t(`admin.outbox.${f}`)}
+          </button>
+        ))}
+        <p className="ml-auto text-xs text-muted">{t('admin.outboxHelp')}</p>
+      </div>
+      {items.isLoading ? (
+        <Spinner />
+      ) : (items.data ?? []).length === 0 ? (
+        <EmptyState icon={<Mail size={24} />} title={t('admin.outboxEmpty')} />
+      ) : (
+        <div className="relative overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-[11px] uppercase tracking-wider text-muted">
+                <th className="px-3 py-2.5 font-medium">{t('audit.when')}</th>
+                <th className="px-3 py-2.5 font-medium">{t('admin.recipient')}</th>
+                <th className="px-3 py-2.5 font-medium">{t('admin.subject')}</th>
+                <th className="px-3 py-2.5 font-medium">{t('table.status')}</th>
+                <th className="px-3 py-2.5 font-medium">
+                  <span className="sr-only">{t('table.actions')}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line border-t border-line">
+              {items.data!.map((n) => (
+                <tr key={n.id}>
+                  <td className="tabular whitespace-nowrap px-3 py-2.5 text-muted">{formatDateTime(n.createdUtc)}</td>
+                  <td className="px-3 py-2.5">
+                    <p className="font-medium">{n.recipientName ?? n.recipientEmail}</p>
+                    <p className="text-xs text-muted">
+                      {n.recipientEmail} · {t(`recipient.${n.recipientType}`)}
+                    </p>
+                  </td>
+                  <td className="max-w-[360px] px-3 py-2.5">
+                    <Link to={`/delegations/${n.delegationId}`} className="line-clamp-2 hover:text-accent-text hover:underline">
+                      {n.subject}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {n.sentUtc ? (
+                      <span className="text-xs text-success">{t('admin.sentAt', { when: formatDateTime(n.sentUtc) })}</span>
+                    ) : (
+                      <div className="max-w-[280px]">
+                        <span className="text-xs text-muted">{t('admin.attempts', { count: n.attempts })}</span>
+                        {n.error && <p className="line-clamp-2 text-xs text-danger" title={n.error}>{n.error}</p>}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    {!n.sentUtc && (
+                      <Button size="sm" variant="secondary" loading={retry.isPending && retry.variables === n.id} onClick={() => retry.mutate(n.id)}>
+                        <RotateCcw size={13} /> {t('admin.retry')}
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   )
 }

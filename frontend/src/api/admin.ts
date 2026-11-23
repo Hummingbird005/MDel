@@ -33,6 +33,23 @@ export interface InformGroupMember {
   addedUtc: string
 }
 
+export type OutboxFilter = 'Failed' | 'Pending' | 'Sent' | 'All'
+
+export interface OutboxItem {
+  id: number
+  delegationId: number
+  recipientEmail: string
+  recipientName: string | null
+  recipientType: string
+  event: string
+  subject: string
+  createdUtc: string
+  sentUtc: string | null
+  attempts: number
+  lastAttemptUtc: string | null
+  error: string | null
+}
+
 export type TestTarget = 'ad' | 'exchange' | 'smtp' | 'storage'
 
 export const adminApi = {
@@ -43,6 +60,9 @@ export const adminApi = {
   informGroup: () => api.get<InformGroupMember[]>('/api/admin/inform-group'),
   addInformMember: (samAccountName: string) => api.post<InformGroupMember[]>('/api/admin/inform-group', { samAccountName }),
   removeInformMember: (id: number) => api.delete<void>(`/api/admin/inform-group/${id}`),
+  notifications: (filter: OutboxFilter) => api.get<OutboxItem[]>(`/api/admin/notifications?filter=${filter}`),
+  failedNotifications: () => api.get<number>('/api/admin/notifications/failed-count'),
+  retryNotification: (id: number) => api.post<void>(`/api/admin/notifications/${id}/retry`),
   getForwarding: (mailbox: string) =>
     api.get<MailboxForwarding>(`/api/admin/exchange/forwarding?mailbox=${encodeURIComponent(mailbox)}`),
 }

@@ -1,12 +1,13 @@
-import { History, ShieldAlert } from 'lucide-react'
+import { ShieldAlert } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Route, Routes } from 'react-router-dom'
 import { hasRole, useCurrentUser, type AppRole, type CurrentUser } from './auth/useCurrentUser'
-import { AppShell, PageHeader } from './components/layout/AppShell'
+import { AppShell } from './components/layout/AppShell'
 import { Alert, Card, EmptyState, Spinner } from './components/ui/primitives'
 import { AdminPage } from './features/admin/AdminPage'
 import { ApprovalsPage } from './features/approvals/ApprovalsPage'
+import { AuditPage } from './features/audit/AuditPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { DelegationDetailPage } from './features/delegations/DelegationDetailPage'
 import { DelegationDrawerProvider } from './features/delegations/DelegationDrawer'
@@ -21,18 +22,6 @@ function RequireRole({ user, roles, children }: { user: CurrentUser; roles: AppR
     <Card>
       <EmptyState icon={<ShieldAlert size={28} />} title={t('common.forbidden')} text={t('common.forbiddenHint')} />
     </Card>
-  )
-}
-
-function AuditPlaceholder() {
-  const { t } = useTranslation()
-  return (
-    <>
-      <PageHeader title={t('nav.audit')} subtitle={t('audit.subtitle')} />
-      <Card>
-        <EmptyState icon={<History size={28} />} title={t('audit.comingSoon')} text={t('audit.comingSoonHint')} />
-      </Card>
-    </>
   )
 }
 
@@ -62,7 +51,7 @@ export default function App() {
           <Route path="delegations" element={<RequireRole user={user} roles={viewer}><DelegationsPage /></RequireRole>} />
           <Route path="delegations/:id" element={<RequireRole user={user} roles={viewer}><DelegationDetailPage /></RequireRole>} />
           <Route path="approvals" element={<RequireRole user={user} roles={['Approver']}><ApprovalsPage /></RequireRole>} />
-          <Route path="audit" element={<RequireRole user={user} roles={['Admin']}><AuditPlaceholder /></RequireRole>} />
+          <Route path="audit" element={<RequireRole user={user} roles={['Admin']}><AuditPage /></RequireRole>} />
           <Route path="admin" element={<RequireRole user={user} roles={['Admin']}><AdminPage /></RequireRole>} />
           <Route path="*" element={<Alert>{t('common.notFound')}</Alert>} />
         </Route>

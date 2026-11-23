@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { delegationsApi, uploadAttachment, type DelegationDetail } from '../../api/delegations'
+import { hasRole, useCurrentUser } from '../../auth/useCurrentUser'
 import { ForwardModeBadge, StatusBadge } from '../../components/ui/badges'
 import { Alert, Avatar, Button, Card, CardHeader, Dialog, EmptyState, IconButton, Spinner } from '../../components/ui/primitives'
 import { formatDateTime, formatSize } from '../../lib/format'
@@ -15,6 +16,8 @@ export function DelegationDetailPage() {
   const { id } = useParams()
   const { t } = useTranslation()
   const drawer = useDelegationDrawer()
+  const { data: me } = useCurrentUser()
+  const isAdmin = hasRole(me, 'Admin')
   const [dialog, setDialog] = useState<'stop' | 'approve' | 'reject' | null>(null)
   const query = useQuery({ queryKey: ['delegations', Number(id)], queryFn: () => delegationsApi.get(Number(id)) })
 
@@ -98,7 +101,16 @@ export function DelegationDetailPage() {
           <Attachments delegation={d} />
 
           <Card>
-            <CardHeader title={t('detail.history')} />
+            <CardHeader
+            title={t('detail.history')}
+            actions={
+              isAdmin && (
+                <Link to={`/audit?entityType=Delegation&entityId=${d.id}`} className="text-xs font-medium text-accent-text hover:underline">
+                  {t('detail.auditTrail')} →
+                </Link>
+              )
+            }
+          />
             <ol className="flex flex-col gap-0 p-4">
               {d.history.map((h, i) => (
                 <li key={i} className="relative flex gap-3 pb-4 last:pb-0">
