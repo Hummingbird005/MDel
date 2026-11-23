@@ -1,6 +1,6 @@
 # MDel – Plan de proiect: forward de căsuță email (Exchange 2016)
 
-Versiune: v2 (include clarificările din 2026-11-23)
+Versiune: v3 (include clarificările din 2026-11-23 și deciziile finale)
 
 ## 1. Decizii confirmate
 
@@ -12,6 +12,10 @@ Versiune: v2 (include clarificările din 2026-11-23)
 | 4 | Administratorii pot **opri** o delegare activă sau programată. |
 | 5 | Fișiere pe **disc**, într-o cale definită din ecranul de administrare. |
 | 6 | Interfață și emailuri în **română și engleză**. |
+| 8 | Dacă sursa are deja un forward: se suprascrie temporar și se **restaurează** la final, cu avertisment în formular. |
+| 9 | Copia în căsuța sursă: **setare globală** din administrare, implicit „da”. |
+| 10 | Notificați: grup aprobatori, grup admini, utilizator sursă, destinatar **+ un grup de informare** dedicat, cu useri adăugați din administrare. |
+| 11 | **Retenție implicită 1 an**, configurabilă și administrabilă (fișiere și audit, separat). |
 | 7 | Exchange 2016 + AD de test există, dar sunt accesibile doar utilizatorului; testarea se face de el, pe baza feedbackului. |
 
 ## 2. Stack
@@ -39,8 +43,9 @@ Versiune: v2 (include clarificările din 2026-11-23)
 
 - **Delegation**: Id, FromUser, ToUser, StartUtc, EndUtc, Status, RequiresApproval, KeepCopy, PreviousForwardValue, CreatedBy/At, ApprovedBy/At, RejectReason, StoppedBy/At/Reason, ExchangeAppliedAt, ExchangeRemovedAt, ErrorInfo.
 - **DelegationAttachment**: Id, DelegationId, OriginalName, StoredName, Size, Hash, UploadedBy/At.
-- **DelegationNotified**: DelegationId, User/Group, Type (aprobator / admin / delegat / destinatar), SentAt.
-- **AppSetting**: cheie-valoare (secretele criptate): AD, Exchange, SMTP, cale stocare fișiere, limită dimensiune (implicit 100 MB), extensii permise, grupuri AD mapate, template-uri, limbă implicită.
+- **DelegationNotified**: DelegationId, User/Group, Type (aprobator / admin / sursă / destinatar / informare), SentAt.
+- **InformGroupMember**: Id, UserSam/Email, AddedBy, AddedAt (grupul de informare, gestionat din administrare, separat de grupurile AD de aprobatori/admini; membrii se aleg din AD).
+- **AppSetting**: cheie-valoare (secretele criptate): AD, Exchange, SMTP, cale stocare fișiere, limită dimensiune (implicit 100 MB), extensii permise, retenție fișiere (implicit 365 zile), retenție audit (implicit 365 zile), copie în sursă (global), grupuri AD mapate, template-uri, limbă implicită.
 - **UserPreference**: limba (ro/en) per utilizator.
 - **AuditLog** (append-only): TimestampUtc, User, Action, EntityType, EntityId, Old/New (JSON), IP, Result.
 - **Statusuri**: `PendingApproval → Scheduled | Active → Expired`; plus `Rejected`, `Stopped`, `Failed`.
@@ -54,13 +59,14 @@ Versiune: v2 (include clarificările din 2026-11-23)
 5. Job la `EndUtc`: elimină forwardul, status `Expired`, notificare către grupurile de admini și utilizatorii implicați.
 6. Oprire de către admin: elimină forwardul (dacă e activ) sau anulează programarea, status `Stopped`, cu motiv; notificare către aceiași destinatari.
 7. Job de reconciliere periodic: DB vs Exchange (acoperă restarturi, modificări manuale, joburi ratate).
+8. Job zilnic de retenție: șterge fișierele atașate și înregistrările de audit mai vechi decât perioada setată (implicit 1 an; fișiere și audit au setări separate). Ștergerea se înregistrează în audit (rezumat: număr, interval); înregistrările delegărilor rămân.
 
 ## 6. Ecrane
 
 1. **Dashboard**: Active / Programate / Expirate (+ în așteptare și oprite), căutare, filtre, paginare, acțiune „Oprește".
 2. **Formular delegare**: câmpuri cerute, upload, câmpuri read-only (creat de, aprobat de, informați).
 3. **Aprobare**: detaliu + Aprobă / Respinge (motiv).
-4. **Administrare**: AD, Exchange, SMTP (cu „Test conexiune"), cale stocare fișiere (cu test de scriere), limită/extensii, mapare grupuri, template-uri, opțiunea de copie.
+4. **Administrare**: grup de informare (adăugare/ștergere useri din AD), retenție fișiere și audit (zile, implicit 365), AD, Exchange, SMTP (cu „Test conexiune"), cale stocare fișiere (cu test de scriere), limită/extensii, mapare grupuri, template-uri, opțiunea de copie.
 5. **Audit**: filtre (user, acțiune, entitate, interval), export CSV.
 6. **i18n**: comutare ro/en în header; mesaje de eroare API și emailuri localizate (limba destinatarului sau cea implicită).
 
@@ -95,9 +101,11 @@ Versiune: v2 (include clarificările din 2026-11-23)
 - Un forward preexistent pe sursă: se restaurează la final; trebuie confirmat comportamentul dorit.
 - Cod nevalidat pe Exchange real până la feedbackul utilizatorului.
 
-## 10. Puncte încă deschise (minore)
+## 10. Notificări
 
-1. Dacă sursa are deja un forward setat: blocăm crearea sau îl suprascriem temporar și îl restaurăm? (propus: suprascriere + restaurare, cu avertisment în formular)
-2. Copie în căsuța sursă: setare globală din administrare sau bifă per delegare? (propus: setare globală, implicit „da")
-3. Cine sunt „cei informați": grupul de aprobatori, grupul de admini, utilizatorul sursă și destinatarul? (propus: toate patru)
-4. Politică de retenție pentru fișiere și audit (ex. ștergere după N ani)?
+Evenimente: cerere nouă, aprobare, respingere, activare, expirare, oprire, eșec.
+Destinatari: grup aprobatori, grup admini, utilizator sursă, destinatar și **grupul de informare** (useri adăugați din administrare). Aprobatorii primesc cerere de acțiune când e nevoie de aprobare și doar notificare la bifa „fără aprobare”. Persoanele notificate apar read-only în formular.
+
+## 11. Puncte deschise
+
+Niciunul blocant. Rămâne de validat pe Exchange real (de către utilizator): comportamentul forwardului, restaurarea valorii anterioare și politicile de transport.
