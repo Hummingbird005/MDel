@@ -13,6 +13,7 @@ public sealed record DelegationListItem(
     DateTime StartUtc,
     DateTime EndUtc,
     bool RequiresApproval,
+    bool KeepCopyInSource,
     UserRef CreatedBy,
     DateTime CreatedUtc,
     int AttachmentCount);
@@ -22,6 +23,7 @@ public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page,
 public sealed record DelegationQuery(
     DelegationStatus[]? Statuses = null,
     string? Search = null,
+    bool? KeepCopy = null,
     int Page = 1,
     int PageSize = 25);
 
@@ -50,7 +52,17 @@ public sealed record StatusHistoryDto(
     DateTime ChangedUtc,
     string? Reason);
 
-public sealed record AllowedActions(bool CanEdit, bool CanEditEndOnly, bool CanStop, bool CanManageAttachments);
+/// <summary>IsOwnRequest: interfața avertizează că aprobarea propriei cereri poate fi interzisă.</summary>
+public sealed record AllowedActions(
+    bool CanEdit, bool CanEditEndOnly, bool CanStop, bool CanManageAttachments,
+    bool CanApprove, bool CanReject, bool IsOwnRequest);
+
+public sealed record DelegationStats(
+    IReadOnlyDictionary<DelegationStatus, int> ByStatus,
+    int ExpiringIn7Days,
+    int ExpiredLast30Days);
+
+public sealed record DecisionRequest(string? Reason = null, string? RowVersion = null);
 
 public sealed record DelegationDetail(
     int Id,

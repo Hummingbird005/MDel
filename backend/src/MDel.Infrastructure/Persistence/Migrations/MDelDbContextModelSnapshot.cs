@@ -262,6 +262,14 @@ namespace MDel.Infrastructure.Persistence.Migrations
                             IsSecret = false,
                             UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
                             Value = "true"
+                        },
+                        new
+                        {
+                            Key = "General.BaseUrl",
+                            Category = "General",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
                         });
                 });
 
@@ -601,6 +609,11 @@ namespace MDel.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int>("Attempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime>("CreatedUtc")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2(3)")
@@ -618,6 +631,20 @@ namespace MDel.Infrastructure.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<string>("HtmlBody")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)")
+                        .HasDefaultValue("ro");
+
+                    b.Property<DateTime?>("LastAttemptUtc")
+                        .HasColumnType("datetime2(3)");
+
                     b.Property<string>("RecipientEmail")
                         .IsRequired()
                         .HasMaxLength(320)
@@ -634,13 +661,18 @@ namespace MDel.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("SentUtc")
                         .HasColumnType("datetime2(3)");
 
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RecipientUserId");
 
-                    b.HasIndex("SentUtc");
-
                     b.HasIndex("DelegationId", "Event");
+
+                    b.HasIndex("SentUtc", "Attempts");
 
                     b.ToTable("DelegationNotifications", "mdel");
                 });

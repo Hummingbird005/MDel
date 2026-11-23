@@ -1,7 +1,9 @@
 using MDel.Application.Abstractions;
 using MDel.Application.Common;
 using MDel.Domain.Enums;
+using MDel.Infrastructure.Delegations;
 using MDel.Infrastructure.Integrations;
+using MDel.Infrastructure.Notifications;
 using MDel.Infrastructure.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +22,8 @@ public sealed class AdminController(
     IMailService mail,
     AttachmentStorageProbe storage,
     ICurrentUser currentUser,
-    IAuditService audit) : ControllerBase
+    IAuditService audit,
+    InformGroupService informGroup) : ControllerBase
 {
     public sealed record SettingsResponse(IReadOnlyList<SettingView> Settings, int MaxAttachmentMb);
 
@@ -85,6 +88,34 @@ public sealed class AdminController(
                 return new ConnectionTestResult(false, $"Connected, but sending failed: {ex.Message}");
             }
         }, ct);
+
+    // ------------------------------------------------------------------ grup de informare
+
+    public sealed record AddInformMemberRequest(string SamAccountName);
+
+    [HttpGet("inform-group")]
+    public Task<IReadOnlyList<InformGroupMemberDto>> InformGroup(CancellationToken ct) => informGroup.ListAsync(ct);
+
+    [HttpPost("inform-group")]
+    public async Task<IActionResult> AddInformMember(AddInformMemberRequest request, CancellationToken ct)
+    {
+        try
+        {
+            await informGroup.AddAsync(request.SamAccountName ?? string.Empty, ct);
+            return Ok(await informGroup.ListAsync(ct));
+        }
+        catch (DelegationValidationException ex)
+        {
+            foreach (var (key, messages) in ex.Errors)
+                foreach (var message in messages)
+                    ModelState.AddModelError(key, message);
+            return ValidationProblem(ModelState);
+        }
+    }
+
+    [HttpDelete("inform-group/{memberId:int}")]
+    public async Task<IActionResult> RemoveInformMember(int memberId, CancellationToken ct) =>
+        await informGroup.RemoveAsync(memberId, ct) ? NoContent() : NotFound();
 
     /// <summary>Verifică forwardul curent al unei căsuțe (doar citire) – util pentru diagnostic.</summary>
     [HttpGet("exchange/forwarding")]

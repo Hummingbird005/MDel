@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Token-uri de temă (valori RGB pentru opacitate în Tailwind). Light implicit; dark după
+   preferința sistemului sau după alegerea salvată (data-theme pe <html>). */
+:root {
+  --bg: 248 250 252; /* #F8FAFC */
+  --card: 255 255 255;
+  --subtle: 241 245 249;
+  --border: 226 232 240;
+  --text: 15 23 42;
+  --muted: 100 116 139;
+  --accent: 79 70 229; /* #4F46E5 */
+  --accent-fg: 255 255 255;
+  --accent-text: 67 56 202;
+  --success: 22 163 74;
+  --warning: 217 119 6;
+  --danger: 220 38 38;
+  --info: 2 132 199;
+  --overlay: 15 23 42;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: 15 23 42; /* #0F172A */
+    --card: 30 41 59; /* #1E293B */
+    --subtle: 39 52 73;
+    --border: 51 65 85;
+    --text: 241 245 249;
+    --muted: 148 163 184;
+    --accent: 99 102 241;
+    --accent-fg: 255 255 255;
+    --accent-text: 165 180 252;
+    --success: 74 222 128;
+    --warning: 251 191 36;
+    --danger: 248 113 113;
+    --info: 56 189 248;
+    --overlay: 2 6 23;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: 15 23 42;
+  --card: 30 41 59;
+  --subtle: 39 52 73;
+  --border: 51 65 85;
+  --text: 241 245 249;
+  --muted: 148 163 184;
+  --accent: 99 102 241;
+  --accent-fg: 255 255 255;
+  --accent-text: 165 180 252;
+  --success: 74 222 128;
+  --warning: 251 191 36;
+  --danger: 248 113 113;
+  --info: 56 189 248;
+  --overlay: 2 6 23;
+  color-scheme: dark;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg font-sans text-fg antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in,
+  .animate-fade-in {
+    animation: none;
+  }
+}

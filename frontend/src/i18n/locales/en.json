@@ -1,14 +1,19 @@
 {
   "app": {
     "title": "MDel – Mailbox Forwarding",
-    "shortTitle": "MDel"
+    "shortTitle": "MDel",
+    "subtitle": "Exchange 2016 · forwarding",
+    "footer": "Temporary email forwarding with approval and automatic expiry."
   },
   "nav": {
     "dashboard": "Dashboard",
     "newDelegation": "New delegation",
     "approvals": "Approvals",
-    "admin": "Administration",
-    "audit": "Audit"
+    "admin": "Settings",
+    "audit": "History / Audit",
+    "main": "Main navigation",
+    "openMenu": "Open menu",
+    "delegations": "Delegations"
   },
   "language": {
     "label": "Language",
@@ -17,7 +22,8 @@
   },
   "roles": {
     "Admin": "Administrator",
-    "Approver": "Approver"
+    "Approver": "Approver",
+    "none": "No role"
   },
   "dashboard": {
     "active": "Active",
@@ -26,17 +32,22 @@
     "pending": "Pending",
     "other": "Stopped / rejected / failed",
     "search": "Search by name, email or #id",
-    "empty": "No delegations.",
+    "empty": "No delegations match the filters",
     "noApproval": "no approval",
     "rowsPerPage": "Rows per page",
-    "displayedRows": "{{from}}–{{to}} of {{count}}"
+    "displayedRows": "{{from}}–{{to}} of {{count}}",
+    "subtitle": "Active, scheduled and expired email forwards",
+    "all": "All"
   },
   "common": {
     "loading": "Loading…",
     "comingSoon": "Work in progress – available in a later stage.",
     "notFound": "Page not found.",
     "forbidden": "You do not have access to this page.",
-    "authError": "AD authentication failed or the server is not responding."
+    "authError": "AD authentication failed or the server is not responding.",
+    "close": "Close",
+    "delete": "Delete",
+    "forbiddenHint": "Access comes from the AD groups configured in Settings."
   },
   "admin": {
     "loadError": "Settings could not be loaded.",
@@ -67,7 +78,8 @@
       "Smtp": "Email (SMTP)",
       "Attachments": "Files",
       "Retention": "Retention",
-      "General": "General"
+      "General": "General",
+      "InformGroup": "Inform group"
     },
     "fields": {
       "Ad_Domain": "AD domain",
@@ -95,7 +107,8 @@
       "Retention_AttachmentsDays": "File retention (days)",
       "Retention_AuditDays": "Audit retention (days)",
       "General_DefaultLanguage": "Default language",
-      "General_PreventSelfApproval": "Prevent approving your own request"
+      "General_PreventSelfApproval": "Prevent approving your own request",
+      "General_BaseUrl": "Application address"
     },
     "help": {
       "Ad_Domain": "E.g. contoso.local",
@@ -117,8 +130,20 @@
       "Attachments_AllowedExtensions": "Comma-separated list, e.g. .pdf,.docx,.msg",
       "Retention_AttachmentsDays": "Default 365. Older files are deleted automatically.",
       "Retention_AuditDays": "Default 365. Older entries are deleted automatically.",
-      "General_DefaultLanguage": "For users without a saved preference and for emails."
-    }
+      "General_DefaultLanguage": "For users without a saved preference and for emails.",
+      "General_BaseUrl": "E.g. https://mdel.contoso.local – used for links in emails."
+    },
+    "subtitle": "AD, Exchange and SMTP connections, groups, files and retention",
+    "informMembers_one": "Inform group · {{count}} member",
+    "informMembers_other": "Inform group · {{count}} members",
+    "informEmpty": "The inform group is empty",
+    "informHelp": "Members receive every delegation notification by email (created, approved, activated, expired, stopped).",
+    "informAddedBy": "added by {{by}} · {{when}}",
+    "informRemove": "Remove {{name}} from the group",
+    "informAdd": "Add to group",
+    "informUser": "User",
+    "informAddButton": "Add",
+    "informAdded": "The user was added to the inform group"
   },
   "status": {
     "PendingApproval": "Pending",
@@ -145,7 +170,7 @@
     "withoutApprovalHelp": "The delegation becomes active/scheduled immediately; approvers are only notified by email.",
     "withApprovalHelp": "The delegation is sent to the approvers group; after approval it becomes active or scheduled.",
     "notes": "Notes",
-    "addFiles": "Add files",
+    "addFiles": "Choose files",
     "filesHelp": "Max {{max}} MB per file. Allowed extensions: {{list}}",
     "fileExtension": "\"{{name}}\": file type not allowed ({{list}}).",
     "fileTooLarge": "\"{{name}}\" exceeds {{max}} MB.",
@@ -170,7 +195,14 @@
     "informed": "Informed",
     "typeToSearch": "Type at least 2 characters…",
     "noUsers": "No users with a mailbox found.",
-    "adError": "AD search failed."
+    "adError": "AD search failed.",
+    "searchAd": "Search Active Directory…",
+    "subtitle": "Temporary forwarding of incoming email, to internal mailboxes only.",
+    "sendForApproval": "Send for approval",
+    "forwardMode": "Forward mode",
+    "forwardModeHelp": "(global setting in Settings → Exchange)",
+    "notesPlaceholder": "E.g. annual leave, business trip…",
+    "removeFile": "Remove {{name}}"
   },
   "detail": {
     "title": "Delegation #{{id}}",
@@ -192,7 +224,7 @@
     "by": "By",
     "reason": "Reason",
     "system": "System",
-    "stop": "Stop delegation",
+    "stop": "Stop",
     "stopTitle": "Stop delegation #{{id}}",
     "stopConfirm": "Stop",
     "stopActiveHelp": "The forward will be removed from Exchange immediately and the previous state restored.",
@@ -200,6 +232,96 @@
     "purged": "deleted (retention)",
     "deleteAttachment": "Delete file",
     "confirmDelete": "Delete file \"{{name}}\"?",
-    "uploadFailed": "The delegation was saved, but a file upload failed: {{error}}"
+    "uploadFailed": "The delegation was saved, but a file upload failed: {{error}}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "noAttachments": "No attachments"
+  },
+  "header": {
+    "search": "Search user, email or #id…",
+    "lightTheme": "Light theme",
+    "darkTheme": "Dark theme"
+  },
+  "kpi": {
+    "active": "Active forwards",
+    "expiringSoon_one": "{{count}} expires in 7 days",
+    "expiringSoon_other": "{{count}} expire in 7 days",
+    "scheduled": "Scheduled",
+    "scheduledFoot": "Activated automatically at the start date",
+    "pending": "Waiting for approval",
+    "pendingFoot": "Sent to the approvers group",
+    "expired": "Expired (30 days)",
+    "expiredFoot": "{{total}} expired in total · forward removed automatically"
+  },
+  "table": {
+    "statusFilter": "Status filter",
+    "modeFilter": "Forward mode filter",
+    "allModes": "All modes",
+    "source": "Source mailbox",
+    "target": "Forward target",
+    "mode": "Forward mode",
+    "period": "Period",
+    "status": "Status",
+    "actions": "Actions",
+    "attachments_one": "{{count}} attachment",
+    "attachments_other": "{{count}} attachments",
+    "edit": "Edit delegation #{{id}}",
+    "stop": "Stop delegation #{{id}}",
+    "emptyHint": "Change the status filter or the search text.",
+    "daysLeft_one": "{{count}} day",
+    "daysLeft_other": "{{count}} days",
+    "latest": "Latest {{shown}} of {{total}}",
+    "viewAll": "View all",
+    "previous": "Previous page",
+    "next": "Next page"
+  },
+  "mode": {
+    "keepCopy": "Forward + copy",
+    "forwardOnly": "Forward only",
+    "keepCopyHelp": "Messages reach the target and also stay in the source mailbox",
+    "forwardOnlyHelp": "Messages reach only the target, no copy in the source mailbox"
+  },
+  "delegations": {
+    "subtitle": "All forwards, filtered by status and mode"
+  },
+  "toast": {
+    "updated": "Delegation #{{id}} was updated",
+    "sentForApproval": "Delegation #{{id}} was sent for approval",
+    "created": "Delegation #{{id}} was created",
+    "approve": "Delegation #{{id}} was approved",
+    "reject": "Delegation #{{id}} was rejected",
+    "stop": "Delegation #{{id}} was stopped",
+    "exchangeFailed": "The Exchange operation failed – see the delegation page for details."
+  },
+  "dialog": {
+    "stopTitle": "Stop delegation #{{id}}?",
+    "approveTitle": "Approve delegation #{{id}}?",
+    "rejectTitle": "Reject delegation #{{id}}?",
+    "stopConfirm": "Stop",
+    "approveConfirm": "Approve",
+    "rejectConfirm": "Reject",
+    "stopActive": "The forward from {{from}} to {{to}} is removed from Exchange right away and the previous state is restored. Administrators and the users involved are notified.",
+    "stopInactive": "The delegation will not be activated. Administrators and the users involved are notified.",
+    "approveNow": "The start date has passed: the forward from {{from}} to {{to}} is applied in Exchange right away.",
+    "approveLater": "The forward from {{from}} to {{to}} is scheduled and activated automatically at the start date.",
+    "reject": "The request is closed and administrators are notified with the reason.",
+    "ownRequest": "This is your own request; approving it may be blocked by the setting in Settings → General."
+  },
+  "notify": {
+    "sent": "sent",
+    "failed": "sending failed",
+    "pending": "queued"
+  },
+  "approvals": {
+    "subtitle": "Forwarding requests waiting for a decision. One approval is enough.",
+    "empty": "No pending requests",
+    "emptyHint": "New requests appear here and are emailed to the approvers group.",
+    "requested": "{{when}} · {{by}}",
+    "details": "Details"
+  },
+  "audit": {
+    "subtitle": "All user and system actions",
+    "comingSoon": "The audit screen arrives in stage 6",
+    "comingSoonHint": "Actions are already recorded in the database (AuditLogs table)."
   }
 }

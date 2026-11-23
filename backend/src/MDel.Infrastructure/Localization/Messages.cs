@@ -30,6 +30,10 @@ public static class Messages
         ["FilePurged"] = ("Fișierul a fost șters conform politicii de retenție.", "The file was deleted by the retention policy."),
         ["CreatedWithoutApproval"] = ("Creată fără aprobare", "Created without approval"),
         ["EditedReapproval"] = ("Modificată – necesită reaprobare", "Edited – re-approval required"),
+        ["Approved"] = ("Aprobată", "Approved"),
+        ["AlreadyProcessed"] = ("Cererea a fost deja procesată (stare: {0}).", "The request was already processed (status: {0})."),
+        ["SelfApproval"] = ("Nu vă puteți aproba sau respinge propria cerere.", "You cannot approve or reject your own request."),
+        ["ApprovalTooLate"] = ("Perioada delegării s-a încheiat; cererea nu mai poate fi aprobată.", "The delegation period has ended; it can no longer be approved."),
         ["ExchangeFailed"] = ("Operația în Exchange a eșuat: {0}", "The Exchange operation failed: {0}"),
     };
 

@@ -45,8 +45,17 @@ public class DelegationNotification
     public RecipientType RecipientType { get; set; }
     public NotificationEvent Event { get; set; }
 
+    /// <summary>Limba în care a fost generat mesajul ("ro"/"en").</summary>
+    public string Language { get; set; } = "ro";
+
+    /// <summary>Conținutul e generat la momentul evenimentului (outbox), trimis apoi de dispatcher.</summary>
+    public string Subject { get; set; } = string.Empty;
+    public string HtmlBody { get; set; } = string.Empty;
+
     public DateTime CreatedUtc { get; set; }
     public DateTime? SentUtc { get; set; }
+    public int Attempts { get; set; }
+    public DateTime? LastAttemptUtc { get; set; }
     public string? Error { get; set; }
 }
 

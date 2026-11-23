@@ -13,7 +13,7 @@ backend/                     ASP.NET Core (.NET 10)
   src/MDel.Infrastructure    EF Core (MDelDbContext + migrații), audit, setări, integrări AD/Exchange/SMTP
   src/MDel.Api               Web API, autentificare AD, middleware audit, servire SPA
   tests/MDel.Tests           xUnit (model EF, API)
-frontend/                    React + TypeScript (Vite), MUI, React Query, i18next (ro/en)
+frontend/                    React + TypeScript (Vite), Tailwind CSS, lucide-react, React Query, i18next (ro/en)
 scripts/                     PowerShell: rol RBAC minim + smoke-test Exchange (vezi scripts/README.md)
 ```
 
@@ -87,6 +87,24 @@ Administrare → Fișiere.
 - Fără cont de serviciu completat, AD și Exchange folosesc identitatea app pool-ului (Kerberos).
 - Contul pentru Exchange are nevoie de rolul RBAC creat cu `scripts/New-MDelRbacRole.ps1`.
 - Forwardul acceptă doar destinatari interni (`UserMailbox`, `SharedMailbox`, `LinkedMailbox`).
+
+## Aprobare și notificări
+
+- O cerere cu aprobare ajunge pe emailul grupului de aprobatori (`Groups.ApproversEmail`). Un singur aprobator
+  este suficient; al doilea primește „deja procesată”. Aprobarea propriei cereri e blocată de `General.PreventSelfApproval`.
+- Cu bifa „Fără aprobare”, delegarea devine programată/activă imediat, iar aprobatorii sunt doar informați.
+- Emailurile se pun într-o coadă (tabela `DelegationNotifications`) în aceeași tranzacție cu schimbarea de stare
+  și sunt trimise de un serviciu de fundal, cu reîncercări (max. 5). Fiecare destinatar primește mesajul în limba lui.
+- Destinatari: aprobatori, administratori (`Groups.AdminsEmail`), utilizatorul sursă, destinatarul și
+  **grupul de informare** (utilizatori adăugați din Setări → Grup de informare).
+- `General.BaseUrl` (Setări → General) adaugă în emailuri link direct către delegare.
+
+## Interfață
+
+- Light / dark mode (buton în header, alegerea se păstrează în browser; implicit urmează sistemul).
+- Sidebar: Dashboard, Delegări, Aprobări (aprobatori), Istoric / Audit și Setări (administratori).
+- Căutare globală în header (`/` sau Ctrl+K), filtre rapide după stare și mod forward.
+- Adăugarea și editarea se fac într-un panou lateral; oprirea, aprobarea și respingerea cer confirmare.
 
 ## Autentificare și roluri
 

@@ -2,6 +2,7 @@ using MDel.Application.Abstractions;
 using MDel.Infrastructure.Auditing;
 using MDel.Infrastructure.Delegations;
 using MDel.Infrastructure.Integrations;
+using MDel.Infrastructure.Notifications;
 using MDel.Infrastructure.Persistence;
 using MDel.Infrastructure.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,11 @@ public static class DependencyInjection
         services.AddScoped<ForwardingManager>();
         services.AddScoped<DelegationService>();
         services.AddScoped<AttachmentService>();
+        services.AddScoped<NotificationService>();
+        services.AddScoped<InformGroupService>();
+        services.AddSingleton<NotificationSignal>();
+        services.AddSingleton<NotificationDispatcher>();
+        services.AddHostedService(sp => sp.GetRequiredService<NotificationDispatcher>());
 
         if (configuration.GetValue("Integrations:UseFakes", false))
         {

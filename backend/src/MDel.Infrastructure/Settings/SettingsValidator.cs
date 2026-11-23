@@ -50,6 +50,10 @@ public sealed class SettingsValidator(long maxRequestBodyBytes)
                 return Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https"
                     ? null : "Must be a URL like http://exchange01.contoso.local/PowerShell/";
 
+            case SettingKeys.AppBaseUrl:
+                return Uri.TryCreate(value, UriKind.Absolute, out var baseUri) && baseUri.Scheme is "http" or "https"
+                    ? null : "Must be a URL like https://mdel.contoso.local";
+
             case SettingKeys.SmtpFromAddress:
             case SettingKeys.GroupAdminsEmail:
             case SettingKeys.GroupApproversEmail:

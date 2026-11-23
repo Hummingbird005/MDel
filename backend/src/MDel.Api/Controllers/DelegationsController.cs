@@ -13,12 +13,31 @@ public sealed class DelegationsController(DelegationService delegations, Attachm
 {
     [HttpGet]
     public Task<PagedResult<DelegationListItem>> List(
-        [FromQuery] DelegationStatus[]? status, [FromQuery] string? search,
+        [FromQuery] DelegationStatus[]? status, [FromQuery] string? search, [FromQuery] bool? keepCopy,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default) =>
-        delegations.ListAsync(new DelegationQuery(status, search, page, pageSize), ct);
+        delegations.ListAsync(new DelegationQuery(status, search, keepCopy, page, pageSize), ct);
 
     [HttpGet("summary")]
     public Task<IReadOnlyDictionary<DelegationStatus, int>> Summary(CancellationToken ct) => delegations.SummaryAsync(ct);
+
+    [HttpGet("stats")]
+    public Task<DelegationStats> Stats(CancellationToken ct) => delegations.StatsAsync(ct);
+
+    [HttpPost("{id:int}/approve")]
+    [Authorize(Policy = AppRoles.Approver)]
+    public Task<IActionResult> Approve(int id, DecisionRequest? request, CancellationToken ct) => Handle(async () =>
+    {
+        await delegations.ApproveAsync(id, request?.RowVersion, ct);
+        return Ok(await delegations.GetAsync(id, ct));
+    });
+
+    [HttpPost("{id:int}/reject")]
+    [Authorize(Policy = AppRoles.Approver)]
+    public Task<IActionResult> Reject(int id, DecisionRequest request, CancellationToken ct) => Handle(async () =>
+    {
+        await delegations.RejectAsync(id, request.Reason ?? string.Empty, request.RowVersion, ct);
+        return Ok(await delegations.GetAsync(id, ct));
+    });
 
     [HttpGet("form-config")]
     [Authorize(Policy = AppRoles.Admin)]

@@ -1,14 +1,19 @@
 {
   "app": {
     "title": "MDel – Forward căsuțe email",
-    "shortTitle": "MDel"
+    "shortTitle": "MDel",
+    "subtitle": "Exchange 2016 · forward",
+    "footer": "Forward temporar de email, cu aprobare și expirare automată."
   },
   "nav": {
     "dashboard": "Dashboard",
     "newDelegation": "Delegare nouă",
     "approvals": "Aprobări",
-    "admin": "Administrare",
-    "audit": "Audit"
+    "admin": "Setări",
+    "audit": "Istoric / Audit",
+    "main": "Navigare principală",
+    "openMenu": "Deschide meniul",
+    "delegations": "Delegări"
   },
   "language": {
     "label": "Limbă",
@@ -17,26 +22,32 @@
   },
   "roles": {
     "Admin": "Administrator",
-    "Approver": "Aprobator"
+    "Approver": "Aprobator",
+    "none": "Fără rol"
   },
   "dashboard": {
     "active": "Active",
     "scheduled": "Programate",
     "expired": "Expirate",
-    "pending": "În așteptare",
+    "pending": "În aprobare",
     "other": "Oprite / respinse / erori",
     "search": "Caută după nume, email sau #id",
-    "empty": "Nu există delegări.",
+    "empty": "Nicio delegare pentru filtrele alese",
     "noApproval": "fără aprobare",
     "rowsPerPage": "Rânduri pe pagină",
-    "displayedRows": "{{from}}–{{to}} din {{count}}"
+    "displayedRows": "{{from}}–{{to}} din {{count}}",
+    "subtitle": "Forward-urile de email active, programate și expirate",
+    "all": "Toate"
   },
   "common": {
     "loading": "Se încarcă…",
     "comingSoon": "În lucru – disponibil într-o etapă următoare.",
     "notFound": "Pagina nu a fost găsită.",
     "forbidden": "Nu aveți drepturi pentru această pagină.",
-    "authError": "Autentificarea AD a eșuat sau serverul nu răspunde."
+    "authError": "Autentificarea AD a eșuat sau serverul nu răspunde.",
+    "close": "Închide",
+    "delete": "Șterge",
+    "forbiddenHint": "Accesul este dat de grupurile AD configurate în Setări."
   },
   "admin": {
     "loadError": "Setările nu au putut fi încărcate.",
@@ -67,7 +78,8 @@
       "Smtp": "Email (SMTP)",
       "Attachments": "Fișiere",
       "Retention": "Retenție",
-      "General": "General"
+      "General": "General",
+      "InformGroup": "Grup de informare"
     },
     "fields": {
       "Ad_Domain": "Domeniu AD",
@@ -95,7 +107,8 @@
       "Retention_AttachmentsDays": "Retenție fișiere (zile)",
       "Retention_AuditDays": "Retenție audit (zile)",
       "General_DefaultLanguage": "Limbă implicită",
-      "General_PreventSelfApproval": "Interzice aprobarea propriei cereri"
+      "General_PreventSelfApproval": "Interzice aprobarea propriei cereri",
+      "General_BaseUrl": "Adresa aplicației"
     },
     "help": {
       "Ad_Domain": "Ex.: contoso.local",
@@ -117,8 +130,21 @@
       "Attachments_AllowedExtensions": "Listă separată prin virgulă, ex.: .pdf,.docx,.msg",
       "Retention_AttachmentsDays": "Implicit 365. Fișierele mai vechi sunt șterse automat.",
       "Retention_AuditDays": "Implicit 365. Înregistrările mai vechi sunt șterse automat.",
-      "General_DefaultLanguage": "Pentru utilizatorii fără preferință salvată și pentru emailuri."
-    }
+      "General_DefaultLanguage": "Pentru utilizatorii fără preferință salvată și pentru emailuri.",
+      "General_BaseUrl": "Ex.: https://mdel.contoso.local – folosită pentru link-urile din emailuri."
+    },
+    "subtitle": "Conexiuni AD, Exchange și SMTP, grupuri, fișiere și retenție",
+    "informMembers_one": "Grup de informare · {{count}} membru",
+    "informMembers_few": "Grup de informare · {{count}} membri",
+    "informMembers_other": "Grup de informare · {{count}} de membri",
+    "informEmpty": "Grupul de informare este gol",
+    "informHelp": "Membrii primesc pe email toate notificările despre delegări (creare, aprobare, activare, expirare, oprire).",
+    "informAddedBy": "adăugat de {{by}} · {{when}}",
+    "informRemove": "Scoate pe {{name}} din grup",
+    "informAdd": "Adaugă în grup",
+    "informUser": "Utilizator",
+    "informAddButton": "Adaugă",
+    "informAdded": "Utilizatorul a fost adăugat în grupul de informare"
   },
   "status": {
     "PendingApproval": "În așteptare",
@@ -145,7 +171,7 @@
     "withoutApprovalHelp": "Delegarea intră direct în starea activă/programată; aprobatorii sunt doar notificați pe email.",
     "withApprovalHelp": "Delegarea se trimite grupului de aprobatori; după aprobare devine activă sau programată.",
     "notes": "Observații",
-    "addFiles": "Adaugă fișiere",
+    "addFiles": "Alegeți fișiere",
     "filesHelp": "Maxim {{max}} MB pe fișier. Extensii permise: {{list}}",
     "fileExtension": "„{{name}}”: tipul nu este permis ({{list}}).",
     "fileTooLarge": "„{{name}}” depășește {{max}} MB.",
@@ -170,7 +196,14 @@
     "informed": "Informați",
     "typeToSearch": "Tastați minim 2 caractere…",
     "noUsers": "Niciun utilizator cu căsuță găsit.",
-    "adError": "Căutarea în AD a eșuat."
+    "adError": "Căutarea în AD a eșuat.",
+    "searchAd": "Caută în Active Directory…",
+    "subtitle": "Forward temporar al emailurilor primite, doar către căsuțe interne.",
+    "sendForApproval": "Trimite spre aprobare",
+    "forwardMode": "Mod forward",
+    "forwardModeHelp": "(setare globală din Setări → Exchange)",
+    "notesPlaceholder": "Ex.: concediu de odihnă, deplasare…",
+    "removeFile": "Elimină {{name}}"
   },
   "detail": {
     "title": "Delegare #{{id}}",
@@ -192,7 +225,7 @@
     "by": "De către",
     "reason": "Motiv",
     "system": "Sistem",
-    "stop": "Oprește delegarea",
+    "stop": "Oprește",
     "stopTitle": "Oprire delegare #{{id}}",
     "stopConfirm": "Oprește",
     "stopActiveHelp": "Forwardul va fi eliminat imediat din Exchange și se va restaura starea anterioară.",
@@ -200,6 +233,99 @@
     "purged": "șters (retenție)",
     "deleteAttachment": "Șterge fișierul",
     "confirmDelete": "Ștergeți fișierul „{{name}}”?",
-    "uploadFailed": "Delegarea a fost salvată, dar încărcarea unui fișier a eșuat: {{error}}"
+    "uploadFailed": "Delegarea a fost salvată, dar încărcarea unui fișier a eșuat: {{error}}",
+    "approve": "Aprobă",
+    "reject": "Respinge",
+    "noAttachments": "Niciun fișier atașat"
+  },
+  "header": {
+    "search": "Caută utilizator, email sau #id…",
+    "lightTheme": "Temă luminoasă",
+    "darkTheme": "Temă întunecată"
+  },
+  "kpi": {
+    "active": "Forward-uri active",
+    "expiringSoon_one": "{{count}} expiră în 7 zile",
+    "expiringSoon_few": "{{count}} expiră în 7 zile",
+    "expiringSoon_other": "{{count}} expiră în 7 zile",
+    "scheduled": "Programate",
+    "scheduledFoot": "Se activează automat la data de început",
+    "pending": "În așteptarea aprobării",
+    "pendingFoot": "Trimise grupului de aprobatori",
+    "expired": "Expirate (30 zile)",
+    "expiredFoot": "{{total}} expirate în total · forward eliminat automat"
+  },
+  "table": {
+    "statusFilter": "Filtru stare",
+    "modeFilter": "Filtru mod forward",
+    "allModes": "Toate modurile",
+    "source": "Căsuță sursă",
+    "target": "Destinatar forward",
+    "mode": "Mod forward",
+    "period": "Perioadă",
+    "status": "Stare",
+    "actions": "Acțiuni",
+    "attachments_one": "{{count}} atașament",
+    "attachments_few": "{{count}} atașamente",
+    "attachments_other": "{{count}} de atașamente",
+    "edit": "Editează delegarea #{{id}}",
+    "stop": "Oprește delegarea #{{id}}",
+    "emptyHint": "Schimbați filtrul de stare sau textul din căutare.",
+    "daysLeft_one": "{{count}} zi",
+    "daysLeft_few": "{{count}} zile",
+    "daysLeft_other": "{{count}} de zile",
+    "latest": "Ultimele {{shown}} din {{total}}",
+    "viewAll": "Vezi toate",
+    "previous": "Pagina anterioară",
+    "next": "Pagina următoare"
+  },
+  "mode": {
+    "keepCopy": "Forward + copie",
+    "forwardOnly": "Doar forward",
+    "keepCopyHelp": "Mesajele ajung la destinatar și rămân și în căsuța sursă",
+    "forwardOnlyHelp": "Mesajele ajung doar la destinatar, fără copie în căsuța sursă"
+  },
+  "delegations": {
+    "subtitle": "Toate forward-urile, cu filtrare după stare și mod"
+  },
+  "toast": {
+    "updated": "Delegarea #{{id}} a fost actualizată",
+    "sentForApproval": "Delegarea #{{id}} a fost trimisă spre aprobare",
+    "created": "Delegarea #{{id}} a fost creată",
+    "approve": "Delegarea #{{id}} a fost aprobată",
+    "reject": "Delegarea #{{id}} a fost respinsă",
+    "stop": "Delegarea #{{id}} a fost oprită",
+    "exchangeFailed": "Operația în Exchange a eșuat – detaliile sunt în pagina delegării."
+  },
+  "dialog": {
+    "stopTitle": "Oprești delegarea #{{id}}?",
+    "approveTitle": "Aprobi delegarea #{{id}}?",
+    "rejectTitle": "Respingi delegarea #{{id}}?",
+    "stopConfirm": "Oprește",
+    "approveConfirm": "Aprobă",
+    "rejectConfirm": "Respinge",
+    "stopActive": "Forwardul de la {{from}} către {{to}} se elimină imediat din Exchange și se restaurează starea anterioară. Sunt notificați administratorii și utilizatorii implicați.",
+    "stopInactive": "Delegarea nu se mai activează. Sunt notificați administratorii și utilizatorii implicați.",
+    "approveNow": "Data de început a trecut: forwardul de la {{from}} către {{to}} se aplică imediat în Exchange.",
+    "approveLater": "Forwardul de la {{from}} către {{to}} se programează și se activează automat la data de început.",
+    "reject": "Cererea se închide, iar administratorii sunt notificați cu motivul respingerii.",
+    "ownRequest": "Aceasta este propria dumneavoastră cerere; aprobarea poate fi blocată de setarea din Setări → General."
+  },
+  "notify": {
+    "sent": "trimis",
+    "failed": "eroare la trimitere",
+    "pending": "în coadă"
+  },
+  "approvals": {
+    "subtitle": "Cererile de forward care așteaptă o decizie. O singură aprobare este suficientă.",
+    "empty": "Nicio cerere în așteptare",
+    "emptyHint": "Cererile noi apar aici și sunt trimise pe email grupului de aprobatori.",
+    "requested": "{{when}} · {{by}}",
+    "details": "Detalii"
+  },
+  "audit": {
+    "subtitle": "Toate acțiunile utilizatorilor și ale sistemului",
+    "comingSoon": "Ecranul de audit vine în etapa 6",
+    "comingSoonHint": "Acțiunile sunt deja înregistrate în baza de date (tabela AuditLogs)."
   }
 }

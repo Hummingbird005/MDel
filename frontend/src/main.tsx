@@ -1,28 +1,28 @@
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
+import { ToastProvider } from './components/ui/toast'
+// Fonturi incluse în build (funcționează și fără acces la internet).
+import '@fontsource-variable/inter'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/500.css'
 import './i18n'
+import './index.css'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false } },
 })
 
-const theme = createTheme({
-  palette: { primary: { main: '#0b4f8a' }, secondary: { main: '#e0a800' } },
-})
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <BrowserRouter>
+      <BrowserRouter>
+        <ToastProvider>
           <App />
-        </BrowserRouter>
-      </ThemeProvider>
+        </ToastProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
 )

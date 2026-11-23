@@ -43,6 +43,7 @@ internal static class DefaultSettings
 
         S(SettingKeys.DefaultLanguage, "ro", "General"),
         S(SettingKeys.PreventSelfApproval, "true", "General"),
+        S(SettingKeys.AppBaseUrl, "", "General"),
     ];
 
     private static AppSetting S(string key, string? value, string category, bool secret = false) => new()
