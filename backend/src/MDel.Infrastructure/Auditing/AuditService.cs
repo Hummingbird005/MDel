@@ -19,8 +19,9 @@ public sealed class AuditService(IServiceScopeFactory scopeFactory, ICurrentUser
         var log = new AuditLog
         {
             TimestampUtc = time.GetUtcNow().UtcDateTime,
-            UserId = currentUser.UserId,
-            UserName = Truncate(currentUser.UserName, 256)!,
+            // Override: login-ul se auditează înainte ca identitatea să fie atașată cererii.
+            UserId = entry.UserIdOverride ?? currentUser.UserId,
+            UserName = Truncate(entry.UserNameOverride ?? currentUser.UserName, 256)!,
             Action = entry.Action,
             EntityType = entry.EntityType,
             EntityId = entry.EntityId,

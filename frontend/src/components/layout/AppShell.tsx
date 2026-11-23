@@ -16,6 +16,7 @@ import {
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { adminApi } from '../../api/admin'
 import { api } from '../../api/client'
 import { delegationsApi } from '../../api/delegations'
 import { hasRole, type AppRole, type CurrentUser } from '../../auth/useCurrentUser'
@@ -72,6 +73,13 @@ function Sidebar({ user, open, onClose }: { user: CurrentUser; open: boolean; on
   const isApprover = hasRole(user, 'Approver')
   const stats = useQuery({ queryKey: ['delegations', 'stats'], queryFn: delegationsApi.stats, refetchInterval: 60_000 })
   const pending = stats.data?.byStatus.PendingApproval ?? 0
+  const isAdmin = hasRole(user, 'Admin')
+  const failedMails = useQuery({
+    queryKey: ['admin', 'notifications', 'failed-count'],
+    queryFn: adminApi.failedNotifications,
+    enabled: isAdmin,
+    refetchInterval: 120_000,
+  })
 
   const content = (
     <div className="flex h-full flex-col gap-6 border-r border-line bg-card px-3 pb-4 pt-4">
@@ -106,6 +114,11 @@ function Sidebar({ user, open, onClose }: { user: CurrentUser; open: boolean; on
               <span className="flex-1">{t(labelKey)}</span>
               {to === '/approvals' && isApprover && pending > 0 && (
                 <span className="tabular rounded-full bg-warning/15 px-1.5 text-[11px] font-semibold text-warning">{pending}</span>
+              )}
+              {to === '/admin' && (failedMails.data ?? 0) > 0 && (
+                <span className="tabular rounded-full bg-danger/15 px-1.5 text-[11px] font-semibold text-danger" title={t('admin.failedMails')}>
+                  {failedMails.data}
+                </span>
               )}
             </NavLink>
           ))}

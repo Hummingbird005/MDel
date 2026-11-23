@@ -28,6 +28,7 @@ public static class DependencyInjection
             }));
 
         services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<AuditQueryService>();
         services.AddScoped<UserProvisioningService>();
         services.AddSingleton(new SettingsValidator(
             configuration.GetValue<long>("Uploads:MaxRequestBodyBytes", 110L * 1024 * 1024)));
@@ -39,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<AttachmentService>();
         services.AddScoped<NotificationService>();
         services.AddScoped<InformGroupService>();
+        services.AddScoped<NotificationAdminService>();
         services.AddSingleton<NotificationSignal>();
         services.AddSingleton<NotificationDispatcher>();
         services.AddHostedService(sp => sp.GetRequiredService<NotificationDispatcher>());

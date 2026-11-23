@@ -79,7 +79,8 @@
       "Attachments": "Fișiere",
       "Retention": "Retenție",
       "General": "General",
-      "InformGroup": "Grup de informare"
+      "InformGroup": "Grup de informare",
+      "Notifications": "Notificări email"
     },
     "fields": {
       "Ad_Domain": "Domeniu AD",
@@ -144,7 +145,24 @@
     "informAdd": "Adaugă în grup",
     "informUser": "Utilizator",
     "informAddButton": "Adaugă",
-    "informAdded": "Utilizatorul a fost adăugat în grupul de informare"
+    "informAdded": "Utilizatorul a fost adăugat în grupul de informare",
+    "failedMails": "Emailuri netrimise",
+    "outbox": {
+      "Failed": "Eșuate",
+      "Pending": "În coadă",
+      "Sent": "Trimise",
+      "All": "Toate"
+    },
+    "outboxHelp": "Ultimele 200 de mesaje. După corectarea setărilor (ex. adresa unui grup), apăsați Retrimite.",
+    "outboxEmpty": "Niciun mesaj în această categorie",
+    "recipient": "Destinatar",
+    "subject": "Subiect",
+    "sentAt": "trimis {{when}}",
+    "attempts_one": "{{count}} încercare",
+    "attempts_few": "{{count}} încercări",
+    "attempts_other": "{{count}} de încercări",
+    "retry": "Retrimite",
+    "mailRetried": "Mesajul a fost repus în coadă"
   },
   "status": {
     "PendingApproval": "În așteptare",
@@ -236,7 +254,8 @@
     "uploadFailed": "Delegarea a fost salvată, dar încărcarea unui fișier a eșuat: {{error}}",
     "approve": "Aprobă",
     "reject": "Respinge",
-    "noAttachments": "Niciun fișier atașat"
+    "noAttachments": "Niciun fișier atașat",
+    "auditTrail": "Istoric audit"
   },
   "header": {
     "search": "Caută utilizator, email sau #id…",
@@ -338,9 +357,72 @@
     "details": "Detalii"
   },
   "audit": {
-    "subtitle": "Toate acțiunile utilizatorilor și ale sistemului",
-    "comingSoon": "Ecranul de audit vine în etapa 6",
-    "comingSoonHint": "Acțiunile sunt deja înregistrate în baza de date (tabela AuditLogs)."
+    "subtitle": "Toate acțiunile utilizatorilor și ale sistemului, cu valorile vechi și noi",
+    "from": "De la",
+    "to": "Până la",
+    "user": "Utilizator",
+    "action": "Acțiune",
+    "allActions": "Toate acțiunile",
+    "allInGroup": "{{group}} – toate",
+    "result": "Rezultat",
+    "allResults": "Toate",
+    "search": "Text",
+    "searchPlaceholder": "detalii, cale, IP…",
+    "entityFilter": "{{type}} #{{id}}",
+    "empty": "Nicio înregistrare pentru filtrele alese",
+    "when": "Când",
+    "target": "Țintă",
+    "details": "Detalii",
+    "hasChanges": "are valori vechi/noi",
+    "actionCode": "Cod acțiune",
+    "correlation": "Corelare",
+    "field": "Câmp",
+    "oldValue": "Înainte",
+    "newValue": "După",
+    "results": {
+      "Success": "Reușit",
+      "Failure": "Eșuat",
+      "Denied": "Refuzat"
+    },
+    "groups": {
+      "Delegation": "Delegări",
+      "Attachment": "Fișiere",
+      "Settings": "Setări",
+      "Admin": "Teste conexiune",
+      "InformGroup": "Grup de informare",
+      "Auth": "Autentificare",
+      "Http": "Cereri HTTP",
+      "User": "Utilizator",
+      "Notification": "Notificări",
+      "Retention": "Retenție",
+      "Audit": "Audit"
+    },
+    "actions": {
+      "Auth_Login": "Autentificare",
+      "Http_Request": "Cerere HTTP",
+      "User_LanguageChanged": "Limbă schimbată",
+      "Settings_Updated": "Setări modificate",
+      "Admin_Test": "Test conexiune {{target}}",
+      "Delegation_Created": "Delegare creată",
+      "Delegation_Updated": "Delegare modificată",
+      "Delegation_Approved": "Delegare aprobată",
+      "Delegation_Rejected": "Delegare respinsă",
+      "Delegation_Stopped": "Delegare oprită",
+      "Delegation_Activated": "Forward aplicat în Exchange",
+      "Delegation_ActivationFailed": "Eroare la aplicarea forwardului",
+      "Delegation_ForwardRemoved": "Forward eliminat din Exchange",
+      "Delegation_RemoveFailed": "Eroare la eliminarea forwardului",
+      "Delegation_DriftDetected": "Forward modificat în afara aplicației",
+      "Delegation_Exported": "Export delegări",
+      "Attachment_Uploaded": "Fișier încărcat",
+      "Attachment_Downloaded": "Fișier descărcat",
+      "Attachment_Deleted": "Fișier șters",
+      "InformGroup_MemberAdded": "Membru adăugat în grupul de informare",
+      "InformGroup_MemberRemoved": "Membru scos din grupul de informare",
+      "Notification_Retried": "Email retrimis",
+      "Retention_Purged": "Ștergere prin retenție",
+      "Audit_Exported": "Export audit"
+    }
   },
   "upcoming": {
     "title": "Următoarele 7 zile",

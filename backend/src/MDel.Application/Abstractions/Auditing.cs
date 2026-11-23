@@ -26,7 +26,9 @@ public sealed record AuditEntry(
     AuditResult Result = AuditResult.Success,
     string? HttpMethod = null,
     string? Path = null,
-    int? StatusCode = null);
+    int? StatusCode = null,
+    int? UserIdOverride = null,
+    string? UserNameOverride = null);
 
 /// <summary>Scrie înregistrări în jurnalul de audit (append-only).</summary>
 public interface IAuditService

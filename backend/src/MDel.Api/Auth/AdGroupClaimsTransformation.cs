@@ -67,7 +67,7 @@ public sealed class AdGroupClaimsTransformation(
         // Prima cerere dintr-o fereastră de 5 minute = „sesiune”; o auditam ca login.
         var audit = scope.ServiceProvider.GetRequiredService<IAuditService>();
         await audit.WriteAsync(new AuditEntry(AuditActions.Login, "AppUser", user.Id.ToString(),
-            NewValues: new { roles }));
+            NewValues: new { roles }, UserIdOverride: user.Id, UserNameOverride: loginName));
 
         return new CachedPrincipal(user.Id, roles);
     }
