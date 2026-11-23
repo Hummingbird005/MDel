@@ -1,0 +1,36 @@
+{
+  "app": {
+    "title": "MDel – Forward căsuțe email",
+    "shortTitle": "MDel"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "newDelegation": "Delegare nouă",
+    "approvals": "Aprobări",
+    "admin": "Administrare",
+    "audit": "Audit"
+  },
+  "language": {
+    "label": "Limbă",
+    "ro": "Română",
+    "en": "English"
+  },
+  "roles": {
+    "Admin": "Administrator",
+    "Approver": "Aprobator"
+  },
+  "dashboard": {
+    "active": "Active",
+    "scheduled": "Programate",
+    "expired": "Expirate",
+    "pending": "În așteptare",
+    "placeholder": "Lista delegărilor va fi disponibilă în etapa 5."
+  },
+  "common": {
+    "loading": "Se încarcă…",
+    "comingSoon": "În lucru – disponibil într-o etapă următoare.",
+    "notFound": "Pagina nu a fost găsită.",
+    "forbidden": "Nu aveți drepturi pentru această pagină.",
+    "authError": "Autentificarea AD a eșuat sau serverul nu răspunde."
+  }
+}

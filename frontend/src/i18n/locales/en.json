@@ -1,0 +1,36 @@
+{
+  "app": {
+    "title": "MDel – Mailbox Forwarding",
+    "shortTitle": "MDel"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "newDelegation": "New delegation",
+    "approvals": "Approvals",
+    "admin": "Administration",
+    "audit": "Audit"
+  },
+  "language": {
+    "label": "Language",
+    "ro": "Română",
+    "en": "English"
+  },
+  "roles": {
+    "Admin": "Administrator",
+    "Approver": "Approver"
+  },
+  "dashboard": {
+    "active": "Active",
+    "scheduled": "Scheduled",
+    "expired": "Expired",
+    "pending": "Pending",
+    "placeholder": "The delegation list will be available in stage 5."
+  },
+  "common": {
+    "loading": "Loading…",
+    "comingSoon": "Work in progress – available in a later stage.",
+    "notFound": "Page not found.",
+    "forbidden": "You do not have access to this page.",
+    "authError": "AD authentication failed or the server is not responding."
+  }
+}

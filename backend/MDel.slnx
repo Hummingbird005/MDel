@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MDel.Api/MDel.Api.csproj" />
+    <Project Path="src/MDel.Application/MDel.Application.csproj" />
+    <Project Path="src/MDel.Domain/MDel.Domain.csproj" />
+    <Project Path="src/MDel.Infrastructure/MDel.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MDel.Tests/MDel.Tests.csproj" />
+  </Folder>
+</Solution>
