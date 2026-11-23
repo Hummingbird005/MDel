@@ -23,6 +23,7 @@ public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page,
 public sealed record DelegationQuery(
     DelegationStatus[]? Statuses = null,
     string? Search = null,
+    bool? KeepCopy = null,
     int Page = 1,
     int PageSize = 25);
 

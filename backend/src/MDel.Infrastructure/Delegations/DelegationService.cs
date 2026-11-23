@@ -41,6 +41,11 @@ public sealed class DelegationService(
             q = q.Where(d => statuses.Contains(d.Status));
         }
 
+        if (query.KeepCopy is { } keepCopy)
+        {
+            q = q.Where(d => d.KeepCopyInSource == keepCopy);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var s = query.Search.Trim();

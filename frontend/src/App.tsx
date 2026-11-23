@@ -1,110 +1,72 @@
-import { Box, CircularProgress, Container } from '@mui/material'
+import { History, ShieldAlert } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Route, Routes } from 'react-router-dom'
 import { hasRole, useCurrentUser, type AppRole, type CurrentUser } from './auth/useCurrentUser'
-import { AppLayout } from './layout/AppLayout'
-import { AdminPage } from './pages/admin/AdminPage'
-import { DashboardPage } from './pages/DashboardPage'
-import { DelegationDetailPage } from './pages/delegations/DelegationDetailPage'
-import { DelegationFormPage } from './pages/delegations/DelegationFormPage'
-import { MessagePage, PlaceholderPage } from './pages/PlaceholderPage'
-
-function RequireRole({ user, role, children }: { user: CurrentUser; role: AppRole | AppRole[]; children: ReactNode }) {
-  const roles = Array.isArray(role) ? role : [role]
-  return roles.some((r) => hasRole(user, r)) ? children : <MessagePage messageKey="common.forbidden" />
-}
+import { AppShell, PageHeader } from './components/layout/AppShell'
+import { Alert, Card, EmptyState, Spinner } from './components/ui/primitives'
+import { AdminPage } from './features/admin/AdminPage'
+import { ApprovalsPage } from './features/approvals/ApprovalsPage'
+import { DashboardPage } from './features/dashboard/DashboardPage'
+import { DelegationDetailPage } from './features/delegations/DelegationDetailPage'
+import { DelegationDrawerProvider } from './features/delegations/DelegationDrawer'
+import { DelegationsPage } from './features/delegations/DelegationsPage'
 
 const viewer: AppRole[] = ['Admin', 'Approver']
 
+function RequireRole({ user, roles, children }: { user: CurrentUser; roles: AppRole[]; children: ReactNode }) {
+  const { t } = useTranslation()
+  if (roles.some((r) => hasRole(user, r))) return children
+  return (
+    <Card>
+      <EmptyState icon={<ShieldAlert size={28} />} title={t('common.forbidden')} text={t('common.forbiddenHint')} />
+    </Card>
+  )
+}
+
+function AuditPlaceholder() {
+  const { t } = useTranslation()
+  return (
+    <>
+      <PageHeader title={t('nav.audit')} subtitle={t('audit.subtitle')} />
+      <Card>
+        <EmptyState icon={<History size={28} />} title={t('audit.comingSoon')} text={t('audit.comingSoonHint')} />
+      </Card>
+    </>
+  )
+}
+
 export default function App() {
   const { data: user, isLoading, isError } = useCurrentUser()
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
 
-  // Limba salvată pe server are prioritate față de cea detectată din browser.
+  // Limba salvată pe server are prioritate față de cea detectată în browser.
   useEffect(() => {
-    if (user && user.preferredLanguage !== i18n.resolvedLanguage) {
-      void i18n.changeLanguage(user.preferredLanguage)
-    }
+    if (user && user.preferredLanguage !== i18n.resolvedLanguage) void i18n.changeLanguage(user.preferredLanguage)
   }, [user, i18n])
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    )
-  }
-
+  if (isLoading) return <Spinner label={t('common.loading')} />
   if (isError || !user) {
     return (
-      <Container sx={{ py: 4 }}>
-        <MessagePage messageKey="common.authError" severity="error" />
-      </Container>
+      <div className="p-6">
+        <Alert tone="danger">{t('common.authError')}</Alert>
+      </div>
     )
   }
 
   return (
-    <Routes>
-      <Route element={<AppLayout user={user} />}>
-        <Route
-          index
-          element={
-            <RequireRole user={user} role={viewer}>
-              <DashboardPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="delegations/new"
-          element={
-            <RequireRole user={user} role="Admin">
-              <DelegationFormPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="delegations/:id"
-          element={
-            <RequireRole user={user} role={viewer}>
-              <DelegationDetailPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="delegations/:id/edit"
-          element={
-            <RequireRole user={user} role="Admin">
-              <DelegationFormPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="approvals"
-          element={
-            <RequireRole user={user} role="Approver">
-              <PlaceholderPage titleKey="nav.approvals" />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="admin"
-          element={
-            <RequireRole user={user} role="Admin">
-              <AdminPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="audit"
-          element={
-            <RequireRole user={user} role="Admin">
-              <PlaceholderPage titleKey="nav.audit" />
-            </RequireRole>
-          }
-        />
-        <Route path="*" element={<MessagePage messageKey="common.notFound" />} />
-      </Route>
-    </Routes>
+    <DelegationDrawerProvider>
+      <Routes>
+        <Route element={<AppShell user={user} />}>
+          <Route index element={<RequireRole user={user} roles={viewer}><DashboardPage /></RequireRole>} />
+          <Route path="delegations" element={<RequireRole user={user} roles={viewer}><DelegationsPage /></RequireRole>} />
+          <Route path="delegations/:id" element={<RequireRole user={user} roles={viewer}><DelegationDetailPage /></RequireRole>} />
+          <Route path="approvals" element={<RequireRole user={user} roles={['Approver']}><ApprovalsPage /></RequireRole>} />
+          <Route path="audit" element={<RequireRole user={user} roles={['Admin']}><AuditPlaceholder /></RequireRole>} />
+          <Route path="admin" element={<RequireRole user={user} roles={['Admin']}><AdminPage /></RequireRole>} />
+          <Route path="*" element={<Alert>{t('common.notFound')}</Alert>} />
+        </Route>
+      </Routes>
+    </DelegationDrawerProvider>
   )
 }

@@ -35,9 +35,16 @@ export interface DelegationListItem {
   startUtc: string
   endUtc: string
   requiresApproval: boolean
+  keepCopyInSource: boolean
   createdBy: UserRef
   createdUtc: string
   attachmentCount: number
+}
+
+export interface DelegationStats {
+  byStatus: Record<DelegationStatus, number>
+  expiringIn7Days: number
+  expiredLast30Days: number
 }
 
 export interface PagedResult<T> {
@@ -101,7 +108,15 @@ export interface DelegationDetail {
   attachments: Attachment[]
   notifications: Notification[]
   history: StatusHistory[]
-  actions: { canEdit: boolean; canEditEndOnly: boolean; canStop: boolean; canManageAttachments: boolean }
+  actions: {
+    canEdit: boolean
+    canEditEndOnly: boolean
+    canStop: boolean
+    canManageAttachments: boolean
+    canApprove: boolean
+    canReject: boolean
+    isOwnRequest: boolean
+  }
 }
 
 export interface SaveDelegationRequest {
@@ -127,15 +142,19 @@ export interface SourceCheck {
 }
 
 export const delegationsApi = {
-  list: (params: { status?: DelegationStatus[]; search?: string; page?: number; pageSize?: number }) => {
+  list: (params: { status?: DelegationStatus[]; search?: string; keepCopy?: boolean; page?: number; pageSize?: number }) => {
     const q = new URLSearchParams()
     params.status?.forEach((s) => q.append('status', s))
+    if (params.keepCopy !== undefined) q.set('keepCopy', String(params.keepCopy))
     if (params.search) q.set('search', params.search)
     q.set('page', String(params.page ?? 1))
     q.set('pageSize', String(params.pageSize ?? 25))
     return api.get<PagedResult<DelegationListItem>>(`/api/delegations?${q}`)
   },
-  summary: () => api.get<Record<DelegationStatus, number>>('/api/delegations/summary'),
+  stats: () => api.get<DelegationStats>('/api/delegations/stats'),
+  approve: (id: number, rowVersion: string) => api.post<DelegationDetail>(`/api/delegations/${id}/approve`, { rowVersion }),
+  reject: (id: number, reason: string, rowVersion: string) =>
+    api.post<DelegationDetail>(`/api/delegations/${id}/reject`, { reason, rowVersion }),
   get: (id: number) => api.get<DelegationDetail>(`/api/delegations/${id}`),
   formConfig: () => api.get<FormConfig>('/api/delegations/form-config'),
   sourceCheck: (fromSam: string) =>

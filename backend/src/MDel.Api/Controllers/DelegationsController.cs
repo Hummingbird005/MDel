@@ -13,9 +13,9 @@ public sealed class DelegationsController(DelegationService delegations, Attachm
 {
     [HttpGet]
     public Task<PagedResult<DelegationListItem>> List(
-        [FromQuery] DelegationStatus[]? status, [FromQuery] string? search,
+        [FromQuery] DelegationStatus[]? status, [FromQuery] string? search, [FromQuery] bool? keepCopy,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default) =>
-        delegations.ListAsync(new DelegationQuery(status, search, page, pageSize), ct);
+        delegations.ListAsync(new DelegationQuery(status, search, keepCopy, page, pageSize), ct);
 
     [HttpGet("summary")]
     public Task<IReadOnlyDictionary<DelegationStatus, int>> Summary(CancellationToken ct) => delegations.SummaryAsync(ct);
