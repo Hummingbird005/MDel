@@ -107,7 +107,15 @@ if (!app.Environment.IsDevelopment())
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.Use((context, next) =>
 {
-    context.Response.Headers.XContentTypeOptions = "nosniff";
+    var headers = context.Response.Headers;
+    headers.XContentTypeOptions = "nosniff";
+    headers.XFrameOptions = "DENY";
+    headers["Referrer-Policy"] = "no-referrer";
+    headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    // SPA-ul și API-ul sunt servite de aceeași aplicație: totul de pe aceeași origine.
+    headers.ContentSecurityPolicy =
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+        "font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
     return next(context);
 });
 app.UseRequestLocalization();
@@ -122,9 +130,30 @@ app.UseMiddleware<AuditMiddleware>();
 app.UseAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+
+// Readiness pentru monitorizare / după deploy: baza de date accesibilă și fără migrări neaplicate.
+app.MapGet("/api/health/ready", async (MDel.Infrastructure.Persistence.MDelDbContext db, CancellationToken ct) =>
+{
+    try
+    {
+        var canConnect = await db.Database.CanConnectAsync(ct);
+        var pending = canConnect && db.Database.IsRelational()
+            ? (await db.Database.GetPendingMigrationsAsync(ct)).ToList()
+            : [];
+        var ready = canConnect && pending.Count == 0;
+        return Results.Json(new { status = ready ? "ready" : "not-ready", database = canConnect, pendingMigrations = pending },
+            statusCode: ready ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { status = "not-ready", database = false, error = ex.GetType().Name },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).AllowAnonymous();
 app.MapControllers();
 // Rutele necunoscute din afara /api servesc SPA-ul (routing client-side).
-app.MapFallbackToFile("{*path:regex(^(?!api/).*$)}", "index.html").AllowAnonymous();
+// Doar căile fără extensie (rute React); un fișier static lipsă rămâne 404, nu index.html.
+app.MapFallbackToFile("{*path:nonfile:regex(^(?!api/).*$)}", "index.html").AllowAnonymous();
 
 app.Run();
 

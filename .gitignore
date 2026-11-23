@@ -15,3 +15,10 @@ frontend/dist/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+
+# Pachet de instalare
+out/
