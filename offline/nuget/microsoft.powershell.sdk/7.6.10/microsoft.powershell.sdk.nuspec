@@ -1,0 +1,86 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.PowerShell.SDK</id>
+    <version>7.6.10</version>
+    <authors>Microsoft</authors>
+    <owners>Microsoft,PowerShell</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>Powershell_black_64.png</icon>
+    <projectUrl>https://github.com/PowerShell/PowerShell</projectUrl>
+    <description>Runtime for hosting PowerShell</description>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <language>en-US</language>
+    <tags>PowerShell</tags>
+    <dependencies>
+      <group targetFramework="net10.0">
+        <dependency id="Microsoft.PowerShell.Commands.Management" version="7.6.10" />
+        <dependency id="Microsoft.PowerShell.Commands.Utility" version="7.6.10" />
+        <dependency id="Microsoft.PowerShell.ConsoleHost" version="7.6.10" />
+        <dependency id="Microsoft.PowerShell.Security" version="7.6.10" />
+        <dependency id="System.Management.Automation" version="7.6.10" />
+        <dependency id="Microsoft.Bcl.AsyncInterfaces" version="10.0.15" />
+        <dependency id="Microsoft.Extensions.ObjectPool" version="10.0.15" />
+        <dependency id="Microsoft.Win32.Registry.AccessControl" version="10.0.15" />
+        <dependency id="Microsoft.Win32.SystemEvents" version="10.0.15" />
+        <dependency id="runtime.android-arm.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.android-arm64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.android-x64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.android-x86.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.linux-arm.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.linux-arm64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.linux-bionic-arm64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.linux-bionic-x64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.linux-musl-arm.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.linux-musl-arm64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.linux-musl-x64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.linux-x64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.maccatalyst-arm64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.maccatalyst-x64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.osx-arm64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="runtime.osx-x64.runtime.native.System.IO.Ports" version="10.0.15" />
+        <dependency id="System.CodeDom" version="10.0.15" />
+        <dependency id="System.ComponentModel.Composition" version="10.0.15" />
+        <dependency id="System.ComponentModel.Composition.Registration" version="10.0.15" />
+        <dependency id="System.Configuration.ConfigurationManager" version="10.0.15" />
+        <dependency id="System.Data.Odbc" version="10.0.15" />
+        <dependency id="System.Data.OleDb" version="10.0.15" />
+        <dependency id="System.Data.SqlClient" version="4.9.1" />
+        <dependency id="System.Diagnostics.EventLog" version="10.0.15" />
+        <dependency id="System.Diagnostics.PerformanceCounter" version="10.0.15" />
+        <dependency id="System.DirectoryServices" version="10.0.15" />
+        <dependency id="System.DirectoryServices.AccountManagement" version="10.0.15" />
+        <dependency id="System.DirectoryServices.Protocols" version="10.0.15" />
+        <dependency id="System.Drawing.Common" version="10.0.15" />
+        <dependency id="System.IO.Packaging" version="10.0.15" />
+        <dependency id="System.IO.Ports" version="10.0.15" />
+        <dependency id="System.Management" version="10.0.15" />
+        <dependency id="System.Net.Http.WinHttpHandler" version="10.0.15" />
+        <dependency id="System.Reflection.Context" version="10.0.15" />
+        <dependency id="System.Runtime.Caching" version="10.0.15" />
+        <dependency id="System.Security.Cryptography.Pkcs" version="10.0.15" />
+        <dependency id="System.Security.Cryptography.ProtectedData" version="10.0.15" />
+        <dependency id="System.Security.Cryptography.Xml" version="10.0.15" />
+        <dependency id="System.Security.Permissions" version="10.0.15" />
+        <dependency id="System.ServiceModel.Http" version="10.0.652802" />
+        <dependency id="System.ServiceModel.NetFramingBase" version="10.0.652802" />
+        <dependency id="System.ServiceModel.NetTcp" version="10.0.652802" />
+        <dependency id="System.ServiceModel.Primitives" version="10.0.652802" />
+        <dependency id="Microsoft.Windows.Compatibility" version="10.0.15" />
+        <dependency id="System.ServiceModel.Syndication" version="10.0.15" />
+        <dependency id="System.ServiceProcess.ServiceController" version="10.0.15" />
+        <dependency id="System.Speech" version="10.0.15" />
+        <dependency id="System.Windows.Extensions" version="10.0.15" />
+        <dependency id="Microsoft.WSMan.Management" version="7.6.10" />
+        <dependency id="Microsoft.PowerShell.Commands.Diagnostics" version="7.6.10" />
+        <dependency id="Microsoft.Management.Infrastructure.CimCmdlets" version="7.6.10" />
+      </group>
+    </dependencies>
+    <contentFiles>
+      <files include="**/*" buildAction="None" copyToOutput="true" flatten="false" />
+    </contentFiles>
+  </metadata>
+</package>

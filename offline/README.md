@@ -1,54 +1,30 @@
-# MDel – kit pentru dezvoltare offline
+# MDel – pachete pentru dezvoltare offline
 
-Tot ce trebuie pentru a continua dezvoltarea **fără internet**: pachetele NuGet (backend, teste, `dotnet-ef`,
-pachetele pentru publicarea pe Windows), pachetele npm (frontend, inclusiv binarele pentru Windows și Linux),
-istoricul git complet și, opțional, kiturile de instalare .NET și Node.js pentru Windows.
-
-Pachetele au câteva sute de MB, de aceea **nu sunt în git**. Se generează cu un workflow GitHub Actions și se
-descarcă o singură dată, pe o mașină cu internet.
-
-## 1. Obținerea kitului (cu internet)
-
-**Varianta A – din GitHub (recomandat, include kiturile de instalare Windows):**
-
-1. GitHub → **Actions** → workflow-ul **Offline kit** → ultima rulare reușită
-   (sau **Run workflow** pentru una nouă) → secțiunea **Artifacts** → descărcați **mdel-offline-kit**.
-2. Dezarhivați conținutul arhivei **în folderul `offline/`** al repository-ului. Rezultatul:
+Folderul conține tot ce trebuie pentru a restaura și compila proiectul **fără internet**:
 
 ```
 offline/
-  nuget/          ~300 MB  pachete NuGet (format „feed” local)
-  npm-cache/      ~45 MB   cache npm
-  repo/           mdel.bundle – tot istoricul git
-  installers/     .NET 10 SDK (win-x64 .exe) și Node.js 22 (x64 .msi)
-  README.md, restore-offline.sh, Restore-Offline.ps1, create-offline-bundle.sh
+  nuget/        ~310 MB  pachetele NuGet (backend, teste, dotnet-ef, pachetele win-x64 pentru publicare) – feed local
+  npm-cache/    ~45 MB   cache npm cu pachetele frontend (inclusiv binarele native pentru Windows și Linux)
+  Restore-Offline.ps1    restaurare + build pe Windows
+  restore-offline.sh     restaurare + build pe Linux / macOS / WSL
+  create-offline-bundle.sh   regenerează nuget/ și npm-cache/ (rulat cu internet)
 ```
 
-**Varianta B – generat local (Linux/macOS/WSL, fără kiturile de instalare Windows):**
+Pachetele sunt în git, deci o simplă copie (sau clonă) a repository-ului ajunge pe mașina offline cu tot cu ele.
 
-```bash
-./offline/create-offline-bundle.sh                 # doar pachetele
-./offline/create-offline-bundle.sh --with-installers   # + .NET SDK și Node.js pentru Windows
-```
+## 1. Pregătirea mașinii offline (o singură dată)
 
-Copiați apoi întregul repository (cu folderul `offline/` completat) pe mașina fără internet.
+Kiturile de instalare **nu** sunt incluse; instalați-le separat (de pe o mașină cu internet / din kitul intern):
 
-## 2. Pregătirea mașinii offline (o singură dată)
-
-| Ce | De unde |
+| Ce | Versiune |
 |---|---|
-| .NET 10 SDK | `offline/installers/dotnet-sdk-10.*-win-x64.exe` |
-| Node.js 22 (include npm) | `offline/installers/node-v22.*-x64.msi` |
-| Editor | Visual Studio 2022/2026 sau VS Code (instalate separat) |
-| SQL Server (pentru rulare cu bază reală) | instalare separată; altfel folosiți baza in-memory (vezi mai jos) |
+| .NET SDK | 10.0 (x64) |
+| Node.js (include npm) | 22 LTS (x64) |
+| Editor | Visual Studio 2022/2026 sau VS Code |
+| SQL Server (pentru rulare cu bază reală) | opțional – altfel baza in-memory (vezi mai jos) |
 
-Codul sursă, dacă nu aveți deja repository-ul:
-
-```bash
-git clone offline/repo/mdel.bundle MDel      # tot istoricul, cu toate branch-urile
-```
-
-## 3. Restaurarea dependențelor (fără internet)
+## 2. Restaurarea dependențelor (fără internet)
 
 Din rădăcina repository-ului:
 
@@ -102,7 +78,7 @@ $env:npm_config_offline = 'true'; $env:npm_config_cache = "$PWD\offline\npm-cach
 npm_config_offline=true npm_config_cache="$PWD/offline/npm-cache" ./scripts/publish.sh
 ```
 
-## 4. Rulare locală fără SQL Server, AD sau Exchange
+## 3. Rulare locală fără SQL Server, AD sau Exchange
 
 ```bash
 cd backend
@@ -113,22 +89,23 @@ cd ../frontend && npm run dev
 
 În Development, autentificarea și integrările (AD, Exchange, SMTP) sunt simulate – vezi README-ul principal.
 
-## 5. Ce NU este în kit
+## 4. Dependențe noi
 
-- **Browserele Playwright** pentru testele E2E (`npm run e2e`), care depind de sistemul de operare. Pe o mașină cu
-  internet rulați `npx playwright install chromium` (din `frontend/`), apoi copiați folderul
-  `%LOCALAPPDATA%\ms-playwright` (Windows) sau `~/.cache/ms-playwright` (Linux) în același loc pe mașina offline.
-  Testele xUnit și build-ul nu au nevoie de el.
-- Pachete NuGet / npm **noi**: dacă adăugați o dependență, regenerați kitul pe o mașină cu internet
-  (workflow-ul *Offline kit* sau `create-offline-bundle.sh`).
+Dacă adăugați sau actualizați un pachet NuGet / npm, pe o mașină **cu internet** (Linux, macOS sau WSL):
+
+```bash
+./offline/create-offline-bundle.sh
+git add offline && git commit -m "Actualizare pachete offline"
+```
+
+## 5. Ce NU este inclus
+
+- Kiturile de instalare .NET SDK și Node.js.
+- **Browserele Playwright** pentru testele E2E (`npm run e2e`). Pe o mașină cu internet rulați
+  `npx playwright install chromium` (din `frontend/`), apoi copiați `%LOCALAPPDATA%\ms-playwright` (Windows) sau
+  `~/.cache/ms-playwright` (Linux) în același loc pe mașina offline. Testele xUnit și build-ul nu au nevoie de ele.
 
 ## 6. Revenirea la sursele online
 
 Ștergeți `backend/NuGet.config` (NuGet revine la nuget.org); pentru npm nu e nimic de schimbat
 (fără `--offline`, npm folosește din nou registry-ul).
-
-## Verificat
-
-Kitul a fost testat pe o clonă nouă, cu cache-ul NuGet gol și fără acces la rețea: restore, `dotnet-ef`, build,
-toate testele xUnit, pachetul de migrări (`efbundle.exe` win-x64), publicarea win-x64, `npm ci --offline` și
-build-ul frontend.
