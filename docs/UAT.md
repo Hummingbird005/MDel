@@ -22,6 +22,7 @@ Rulați după instalare (vezi [DEPLOY.md](DEPLOY.md)), cu **căsuțe de test**. 
 | 2.2 | Exchange → verifică forwardul unei căsuțe de test | afișează forwardul curent (sau „–”) | |
 | 2.3 | Grup de informare: adaugă un utilizator | apare în listă | |
 | 2.4 | Salvează o valoare invalidă (ex. retenție 0) | mesaj de eroare pe câmp, nimic salvat | |
+| 2.5 | Șabloane email: modificați „Cerere de aprobare” (subiect + text cu `{sursa}`, `{inceput}`) și salvați | previzualizarea arată textul; următoarea cerere sosește cu noul text (în română) | |
 
 ## 3. Delegare cu aprobare
 

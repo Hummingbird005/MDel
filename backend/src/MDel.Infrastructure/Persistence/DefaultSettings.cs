@@ -1,5 +1,6 @@
 using MDel.Domain;
 using MDel.Domain.Entities;
+using MDel.Infrastructure.Notifications;
 
 namespace MDel.Infrastructure.Persistence;
 
@@ -44,7 +45,16 @@ internal static class DefaultSettings
         S(SettingKeys.DefaultLanguage, "ro", "General"),
         S(SettingKeys.PreventSelfApproval, "true", "General"),
         S(SettingKeys.AppBaseUrl, "", "General"),
+        .. TemplateSettings(),
     ];
+
+    /// <summary>Șabloanele de email în română, cu textul implicit (editabile din Setări → Șabloane email).</summary>
+    private static IEnumerable<AppSetting> TemplateSettings() =>
+        Enum.GetValues<TemplateKind>().SelectMany(kind => new[]
+        {
+            S(NotificationTemplates.SubjectKey(kind), NotificationTemplates.RomanianDefaults[kind].Subject, "Templates"),
+            S(NotificationTemplates.BodyKey(kind), NotificationTemplates.RomanianDefaults[kind].Body, "Templates"),
+        });
 
     private static AppSetting S(string key, string? value, string category, bool secret = false) => new()
     {

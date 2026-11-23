@@ -1,4 +1,5 @@
 using MDel.Domain;
+using MDel.Infrastructure.Notifications;
 
 namespace MDel.Infrastructure.Settings;
 
@@ -15,7 +16,18 @@ public sealed class SettingsValidator(long maxRequestBodyBytes)
 
     public string? Validate(string key, string? value)
     {
-        if (string.IsNullOrEmpty(value)) return null; // golirea unei setări e permisă
+        if (string.IsNullOrEmpty(value)) return null; // golirea unei setări e permisă (la șabloane: textul implicit)
+
+        if (key.StartsWith("Templates.", StringComparison.Ordinal))
+        {
+            var isSubject = key.EndsWith(".Subject", StringComparison.Ordinal);
+            var max = isSubject ? NotificationTemplates.MaxSubjectLength : NotificationTemplates.MaxBodyLength;
+            if (value.Length > max) return $"Maximum {max} characters.";
+            if (isSubject && value.Contains('\n')) return "The subject must be a single line.";
+            var unknown = NotificationTemplates.UnknownPlaceholders(value);
+            return unknown.Count == 0 ? null
+                : $"Unknown fields: {string.Join(", ", unknown.Select(u => "{" + u + "}"))}. Available: {string.Join(", ", NotificationTemplates.Placeholders.Select(p => "{" + p + "}"))}";
+        }
 
         if (BoolKeys.Contains(key))
             return bool.TryParse(value, out _) ? null : "Must be 'true' or 'false'.";

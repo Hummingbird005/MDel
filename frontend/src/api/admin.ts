@@ -50,6 +50,13 @@ export interface OutboxItem {
   error: string | null
 }
 
+export type TemplateKind = 'Request' | 'Pending' | 'Direct' | 'Approved' | 'Rejected' | 'Activated' | 'Expired' | 'Stopped' | 'Failed'
+
+export interface TemplatesMeta {
+  templates: { kind: TemplateKind; subjectKey: string; bodyKey: string; defaultSubject: string; defaultBody: string }[]
+  placeholders: string[]
+}
+
 export type TestTarget = 'ad' | 'exchange' | 'smtp' | 'storage'
 
 export const adminApi = {
@@ -63,6 +70,9 @@ export const adminApi = {
   notifications: (filter: OutboxFilter) => api.get<OutboxItem[]>(`/api/admin/notifications?filter=${filter}`),
   failedNotifications: () => api.get<number>('/api/admin/notifications/failed-count'),
   retryNotification: (id: number) => api.post<void>(`/api/admin/notifications/${id}/retry`),
+  templates: () => api.get<TemplatesMeta>('/api/admin/templates'),
+  previewTemplate: (kind: TemplateKind, subject: string, body: string) =>
+    api.post<{ subject: string; html: string }>('/api/admin/templates/preview', { kind, subject, body }),
   getForwarding: (mailbox: string) =>
     api.get<MailboxForwarding>(`/api/admin/exchange/forwarding?mailbox=${encodeURIComponent(mailbox)}`),
 }
