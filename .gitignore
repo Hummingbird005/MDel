@@ -22,3 +22,10 @@ frontend/playwright-report/
 
 # Pachet de instalare
 out/
+
+# Kit offline (generat, se descarcă din GitHub Actions)
+offline/nuget/
+offline/npm-cache/
+offline/repo/
+offline/installers/
+backend/NuGet.config
