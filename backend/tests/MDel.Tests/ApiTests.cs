@@ -110,6 +110,16 @@ public class ApiTests(MDelApiFactory factory) : IClassFixture<MDelApiFactory>
     }
 
     [Fact]
+    public async Task Readiness_and_security_headers()
+    {
+        var response = await factory.CreateClient().GetAsync("/api/health/ready");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
+        Assert.Contains("frame-ancestors 'none'", response.Headers.GetValues("Content-Security-Policy").Single());
+        Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+    }
+
+    [Fact]
     public async Task Unknown_api_route_is_404_not_spa()
     {
         var response = await factory.CreateClient().GetAsync("/api/does-not-exist");

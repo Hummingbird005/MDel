@@ -46,7 +46,10 @@ dotnet ef migrations add <NumeMigrare> -p src/MDel.Infrastructure -s src/MDel.Ap
 dotnet ef database update -p src/MDel.Infrastructure -s src/MDel.Api
 ```
 
-Migrarea inițială (`InitialCreate`) este deja generată. Pentru un server de producție
+`dotnet ef` citește connection string-ul `MDel` din `src/MDel.Api/appsettings.Development.json`
+(sau `appsettings.{ASPNETCORE_ENVIRONMENT}.json`); variabila `MDEL_CONNECTION_STRING` are prioritate.
+
+Migrările sunt deja generate. Pentru un server de producție
 fără acces direct se poate genera scriptul SQL idempotent:
 
 ```bash
@@ -148,8 +151,16 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 ## Teste
 
 ```bash
-cd backend && dotnet test MDel.slnx
+cd backend && dotnet test MDel.slnx          # 118 teste: model EF, API, reguli, notificări, scheduler, audit
 cd frontend && npm run lint && npm run build
+cd frontend && npm run e2e                   # Playwright: pornește backend-ul (in-memory) și Vite
 ```
 
 Testul `Migrations_are_in_sync_with_the_model` eșuează dacă modelul s-a schimbat fără o migrare nouă.
+CI-ul (GitHub Actions) rulează toate trei; la merge în `main` produce pachetul de instalare **mdel-release**.
+
+## Instalare în producție
+
+Vezi [docs/DEPLOY.md](docs/DEPLOY.md) (IIS, SQL Server, Exchange, configurare, operare) și
+[docs/UAT.md](docs/UAT.md) (checklist de acceptanță pe mediul de test). Pachetul se construiește cu
+`scripts/Publish-MDel.ps1` (Windows) sau `scripts/publish.sh`.
