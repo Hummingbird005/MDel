@@ -1,3 +1,4 @@
+using MDel.Application.Abstractions;
 using MDel.Application.Common;
 using MDel.Domain.Enums;
 using MDel.Infrastructure.Delegations;
@@ -11,11 +12,39 @@ namespace MDel.Api.Controllers;
 [Route("api/delegations")]
 public sealed class DelegationsController(DelegationService delegations, AttachmentService attachments) : ControllerBase
 {
+    /// <summary>Parametrii comuni pentru listă și export.</summary>
+    public sealed class ListParameters
+    {
+        public DelegationStatus[]? Status { get; init; }
+        public string? Search { get; init; }
+        public bool? KeepCopy { get; init; }
+        public DelegationSort Sort { get; init; }
+        public bool Desc { get; init; }
+        public DateTime? From { get; init; }
+        public DateTime? To { get; init; }
+        public int Page { get; init; } = 1;
+        public int PageSize { get; init; } = 25;
+
+        public DelegationQuery ToQuery() => new(Status, Search, KeepCopy, Page, PageSize, Sort, Desc, From, To);
+    }
+
     [HttpGet]
-    public Task<PagedResult<DelegationListItem>> List(
-        [FromQuery] DelegationStatus[]? status, [FromQuery] string? search, [FromQuery] bool? keepCopy,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default) =>
-        delegations.ListAsync(new DelegationQuery(status, search, keepCopy, page, pageSize), ct);
+    public Task<PagedResult<DelegationListItem>> List([FromQuery] ListParameters p, CancellationToken ct) =>
+        delegations.ListAsync(p.ToQuery(), ct);
+
+    [HttpGet("upcoming")]
+    public Task<IReadOnlyList<UpcomingEvent>> Upcoming([FromQuery] int days = 7, CancellationToken ct = default) =>
+        delegations.UpcomingAsync(days, ct);
+
+    /// <summary>Export CSV (separator „;” și BOM UTF-8, ca Excel în setările românești să-l deschidă corect).</summary>
+    [HttpGet("export")]
+    public async Task<IActionResult> Export([FromQuery] ListParameters p, [FromServices] IAuditService audit, CancellationToken ct)
+    {
+        var rows = await delegations.ListAllAsync(p.ToQuery(), ct);
+        var csv = DelegationCsv.Write(rows);
+        await audit.WriteAsync(new AuditEntry("Delegation.Exported", Details: $"{rows.Count} rows"), ct);
+        return File(csv, "text/csv; charset=utf-8", $"mdel-delegari-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv");
+    }
 
     [HttpGet("summary")]
     public Task<IReadOnlyDictionary<DelegationStatus, int>> Summary(CancellationToken ct) => delegations.SummaryAsync(ct);

@@ -19,7 +19,7 @@ export function ApprovalsPage() {
 
   const query = useQuery({
     queryKey: ['delegations', 'list', 'approvals', search],
-    queryFn: () => delegationsApi.list({ status: ['PendingApproval'], search: search.trim(), pageSize: 100 }),
+    queryFn: () => delegationsApi.list({ status: ['PendingApproval'], search: search.trim(), sort: 'Start', page: 1, pageSize: 100 }),
     refetchInterval: 30_000,
   })
 

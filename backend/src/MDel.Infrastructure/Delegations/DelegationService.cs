@@ -35,6 +35,39 @@ public sealed class DelegationService(
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, 200);
 
+        var q = Filter(query);
+        var total = await q.CountAsync(ct);
+        var items = await Sort(q, query).Skip((page - 1) * pageSize).Take(pageSize).Select(ListProjection).ToListAsync(ct);
+        return new PagedResult<DelegationListItem>(items, total, page, pageSize);
+    }
+
+    /// <summary>Toate rezultatele filtrului (max. 10 000), pentru export.</summary>
+    public async Task<IReadOnlyList<DelegationListItem>> ListAllAsync(DelegationQuery query, CancellationToken ct) =>
+        await Sort(Filter(query), query).Take(10_000).Select(ListProjection).ToListAsync(ct);
+
+    /// <summary>Activările și expirările care urmează în următoarele <paramref name="days"/> zile.</summary>
+    public async Task<IReadOnlyList<UpcomingEvent>> UpcomingAsync(int days, CancellationToken ct)
+    {
+        var now = Now;
+        var until = now.AddDays(Math.Clamp(days, 1, 31));
+
+        var activations = await db.Delegations.AsNoTracking()
+            .Where(d => (d.Status == DelegationStatus.Scheduled || d.Status == DelegationStatus.PendingApproval) &&
+                        d.StartUtc >= now && d.StartUtc <= until)
+            .Select(ListProjection).ToListAsync(ct);
+        var expirations = await db.Delegations.AsNoTracking()
+            .Where(d => d.Status == DelegationStatus.Active && d.EndUtc >= now && d.EndUtc <= until)
+            .Select(ListProjection).ToListAsync(ct);
+
+        return activations.Select(d => new UpcomingEvent(UpcomingEventType.Activation, d.StartUtc, d))
+            .Concat(expirations.Select(d => new UpcomingEvent(UpcomingEventType.Expiration, d.EndUtc, d)))
+            .OrderBy(e => e.AtUtc)
+            .Take(50)
+            .ToList();
+    }
+
+    private IQueryable<Delegation> Filter(DelegationQuery query)
+    {
         var q = db.Delegations.AsNoTracking();
         if (query.Statuses is { Length: > 0 } statuses)
         {
@@ -44,6 +77,18 @@ public sealed class DelegationService(
         if (query.KeepCopy is { } keepCopy)
         {
             q = q.Where(d => d.KeepCopyInSource == keepCopy);
+        }
+
+        if (query.FromUtc is { } fromValue)
+        {
+            var from = ToUtc(fromValue);
+            q = q.Where(d => d.EndUtc > from);
+        }
+
+        if (query.ToUtc is { } toValue)
+        {
+            var to = ToUtc(toValue);
+            q = q.Where(d => d.StartUtc < to);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -57,15 +102,23 @@ public sealed class DelegationService(
                                (d.ToUser.Email != null && d.ToUser.Email.Contains(s)));
         }
 
-        var total = await q.CountAsync(ct);
-
-        // Programatele: cele mai apropiate primele; restul: cele mai recente primele.
-        var onlyScheduled = query.Statuses is [DelegationStatus.Scheduled];
-        q = onlyScheduled ? q.OrderBy(d => d.StartUtc) : q.OrderByDescending(d => d.StartUtc).ThenByDescending(d => d.Id);
-
-        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).Select(ListProjection).ToListAsync(ct);
-        return new PagedResult<DelegationListItem>(items, total, page, pageSize);
+        return q;
     }
+
+    private static IQueryable<Delegation> Sort(IQueryable<Delegation> q, DelegationQuery query) => (query.Sort, query.Descending) switch
+    {
+        (DelegationSort.Start, false) => q.OrderBy(d => d.StartUtc).ThenBy(d => d.Id),
+        (DelegationSort.Start, true) => q.OrderByDescending(d => d.StartUtc).ThenByDescending(d => d.Id),
+        (DelegationSort.End, false) => q.OrderBy(d => d.EndUtc).ThenBy(d => d.Id),
+        (DelegationSort.End, true) => q.OrderByDescending(d => d.EndUtc).ThenByDescending(d => d.Id),
+        (DelegationSort.Created, false) => q.OrderBy(d => d.CreatedUtc).ThenBy(d => d.Id),
+        (DelegationSort.Created, true) => q.OrderByDescending(d => d.CreatedUtc).ThenByDescending(d => d.Id),
+        (DelegationSort.Id, false) => q.OrderBy(d => d.Id),
+        (DelegationSort.Id, true) => q.OrderByDescending(d => d.Id),
+        // Implicit: programatele – cele mai apropiate primele; restul – cele mai recente primele.
+        _ when query.Statuses is [DelegationStatus.Scheduled] => q.OrderBy(d => d.StartUtc).ThenBy(d => d.Id),
+        _ => q.OrderByDescending(d => d.StartUtc).ThenByDescending(d => d.Id),
+    };
 
     public async Task<IReadOnlyDictionary<DelegationStatus, int>> SummaryAsync(CancellationToken ct)
     {

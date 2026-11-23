@@ -122,6 +122,9 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 - Light / dark mode (buton în header, alegerea se păstrează în browser; implicit urmează sistemul).
 - Sidebar: Dashboard, Delegări, Aprobări (aprobatori), Istoric / Audit și Setări (administratori).
 - Căutare globală în header (`/` sau Ctrl+K), filtre rapide după stare și mod forward.
+- Dashboard: carduri KPI (click = filtru), „Următoarele 7 zile” (activări și expirări, grupate pe zile), ultimele delegări.
+- Delegări: sortare (început, sfârșit, cele mai noi), filtru pe interval de date, paginare și **Export CSV**
+  (`;` + UTF-8 BOM pentru Excel, aceleași filtre ca lista, export auditat). Filtrele sunt în URL, deci link-urile se pot trimite.
 - Adăugarea și editarea se fac într-un panou lateral; oprirea, aprobarea și respingerea cer confirmare.
 
 ## Autentificare și roluri

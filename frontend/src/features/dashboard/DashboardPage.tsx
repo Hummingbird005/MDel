@@ -8,7 +8,9 @@ import { PageHeader } from '../../components/layout/AppShell'
 import { Button } from '../../components/ui/primitives'
 import { cx } from '../../lib/cx'
 import { useDelegationDrawer } from '../delegations/DelegationDrawer'
-import { DelegationTable, type StatusFilter } from '../delegations/DelegationTable'
+import { DelegationTable } from '../delegations/DelegationTable'
+import type { StatusFilter } from '../delegations/filters'
+import { UpcomingPanel } from './UpcomingPanel'
 import { useDelegationList } from '../delegations/useDelegationList'
 
 interface Kpi {
@@ -75,11 +77,11 @@ export function DashboardPage() {
         {kpis.map(({ filter, labelKey, value, foot, icon: Icon, tone }) => (
           <button
             key={filter}
-            onClick={() => list.setStatus(filter)}
-            aria-pressed={list.status === filter}
+            onClick={() => list.setFilter('status', list.filters.status === filter ? 'all' : filter)}
+            aria-pressed={list.filters.status === filter}
             className={cx(
               'flex flex-col gap-3 rounded-xl bg-card p-4 text-left ring-1 transition hover:shadow-sm',
-              list.status === filter ? 'ring-2 ring-accent' : 'ring-line hover:ring-accent/40',
+              list.filters.status === filter ? 'ring-2 ring-accent' : 'ring-line hover:ring-accent/40',
             )}
           >
             <div className="flex items-center justify-between">
@@ -94,18 +96,18 @@ export function DashboardPage() {
         ))}
       </div>
 
+      <UpcomingPanel />
+
       <DelegationTable
         rows={list.query.data?.items ?? []}
         loading={list.query.isFetching}
-        status={list.status}
-        onStatus={list.setStatus}
-        mode={list.mode}
-        onMode={list.setMode}
+        filters={list.filters}
+        onFilter={list.setFilter}
         canManage={isAdmin}
         footer={
           <>
             <span className="tabular">{t('table.latest', { shown: list.query.data?.items.length ?? 0, total: list.query.data?.total ?? 0 })}</span>
-            <Link to={`/delegations${list.status === 'all' ? '' : `?status=${list.status}`}`} className="font-medium text-accent-text hover:underline">
+            <Link to={`/delegations${list.filters.status === 'all' ? '' : `?status=${list.filters.status}`}`} className="font-medium text-accent-text hover:underline">
               {t('table.viewAll')} →
             </Link>
           </>

@@ -37,6 +37,23 @@ public static class Messages
         ["ExchangeFailed"] = ("Operația în Exchange a eșuat: {0}", "The Exchange operation failed: {0}"),
     };
 
+    private static readonly Dictionary<Domain.Enums.DelegationStatus, (string Ro, string En)> StatusNames = new()
+    {
+        [Domain.Enums.DelegationStatus.PendingApproval] = ("În așteptare", "Pending"),
+        [Domain.Enums.DelegationStatus.Scheduled] = ("Programată", "Scheduled"),
+        [Domain.Enums.DelegationStatus.Active] = ("Activă", "Active"),
+        [Domain.Enums.DelegationStatus.Expired] = ("Expirată", "Expired"),
+        [Domain.Enums.DelegationStatus.Rejected] = ("Respinsă", "Rejected"),
+        [Domain.Enums.DelegationStatus.Stopped] = ("Oprită", "Stopped"),
+        [Domain.Enums.DelegationStatus.Failed] = ("Eroare", "Failed"),
+    };
+
+    public static string Status(Domain.Enums.DelegationStatus status)
+    {
+        var (ro, en) = StatusNames[status];
+        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? en : ro;
+    }
+
     public static string Get(string key, params object[] args)
     {
         var (ro, en) = Texts[key];
