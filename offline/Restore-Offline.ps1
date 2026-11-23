@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Restaurează dependențele backend și frontend din kitul offline (fără internet), pe Windows.
+    Restaurează dependențele backend și frontend din pachetele din offline\ (fără internet), pe Windows.
 .EXAMPLE
     .\offline\Restore-Offline.ps1
 #>
@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $off = Join-Path $root 'offline'
 if (-not (Test-Path (Join-Path $off 'nuget')) -or -not (Test-Path (Join-Path $off 'npm-cache'))) {
-    throw 'Lipsesc offline\nuget sau offline\npm-cache – dezarhivați kitul offline (vezi offline\README.md).'
+    throw 'Lipsesc offline\nuget sau offline\npm-cache – regenerați-le cu offline/create-offline-bundle.sh (vezi offline\README.md).'
 }
 
 Write-Host '==> Backend (NuGet doar din offline\nuget)'
@@ -16,7 +16,7 @@ Write-Host '==> Backend (NuGet doar din offline\nuget)'
 $nugetFolder = (Resolve-Path (Join-Path $off 'nuget')).Path
 $config = @"
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generat de offline\Restore-Offline.ps1: NuGet folosește doar kitul offline. Ștergeți fișierul pentru surse online. -->
+<!-- Generat de offline\Restore-Offline.ps1: NuGet folosește doar pachetele din offline\. Ștergeți fișierul pentru surse online. -->
 <configuration>
   <packageSources>
     <clear />

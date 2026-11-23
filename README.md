@@ -40,7 +40,7 @@ backend/                     ASP.NET Core (.NET 10)
 frontend/                    React + TypeScript (Vite), Tailwind CSS, lucide-react, React Query, i18next (ro/en)
   e2e/                       teste end-to-end Playwright
 scripts/                     rol RBAC Exchange, smoke-test Exchange, publicare (Publish-MDel.ps1 / publish.sh)
-offline/                     kit pentru dezvoltare offline: scripturi + instrucțiuni (pachetele vin din CI)
+offline/                     pachetele NuGet și npm pentru dezvoltare offline + scripturi de restaurare
 docs/                        DEPLOY.md (instalare IIS), UAT.md (checklist de acceptanță), capturi
 ```
 
@@ -193,9 +193,8 @@ CI-ul (GitHub Actions) rulează toate trei; la merge în `main` produce pachetul
 
 ## Dezvoltare offline
 
-Kitul cu toate pachetele (NuGet, npm, istoricul git și kiturile de instalare .NET 10 / Node.js 22 pentru Windows)
-se descarcă din GitHub Actions (workflow-ul **Offline kit**, artefactul `mdel-offline-kit`) și se dezarhivează în
-`offline/`. Restaurarea fără internet: `offline/Restore-Offline.ps1` (Windows) sau `offline/restore-offline.sh`.
+Toate pachetele NuGet și npm sunt în repository, în `offline/` (~350 MB). Pe o mașină fără internet, cu .NET 10 SDK
+și Node.js 22 instalate, restaurarea se face cu `offline/Restore-Offline.ps1` (Windows) sau `offline/restore-offline.sh`.
 Detalii: [offline/README.md](offline/README.md).
 
 ## Instalare în producție

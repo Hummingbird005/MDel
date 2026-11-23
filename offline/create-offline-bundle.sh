@@ -1,18 +1,15 @@
 #!/usr/bin/env bash
-# Creează kitul pentru dezvoltare offline în folderul offline/ (rulat online, pe Linux sau în CI):
-#   offline/nuget/        – toate pachetele NuGet (backend, teste, dotnet-ef, pachetele win-x64 pentru publicare)
-#   offline/npm-cache/    – cache npm cu toate pachetele frontend (inclusiv binarele Windows și Linux)
-#   offline/repo/mdel.bundle – tot istoricul git (clonare fără GitHub)
-#   offline/installers/   – opțional (--with-installers): .NET 10 SDK și Node.js 22 pentru Windows x64
+# Regenerează pachetele pentru dezvoltare offline în folderul offline/ (rulat online, pe Linux/macOS/WSL),
+# apoi se face commit la rezultat. Necesar după adăugarea sau actualizarea unei dependențe NuGet / npm.
+#   offline/nuget/      – toate pachetele NuGet (backend, teste, dotnet-ef, pachetele win-x64 pentru publicare)
+#   offline/npm-cache/  – cache npm cu toate pachetele frontend (inclusiv binarele Windows și Linux)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OFF="$ROOT/offline"
-WITH_INSTALLERS=false
-[[ "${1:-}" == "--with-installers" ]] && WITH_INSTALLERS=true
 
-rm -rf "$OFF/nuget" "$OFF/npm-cache" "$OFF/repo" "$OFF/installers"
-mkdir -p "$OFF/nuget" "$OFF/npm-cache" "$OFF/repo"
+rm -rf "$OFF/nuget" "$OFF/npm-cache"
+mkdir -p "$OFF/nuget" "$OFF/npm-cache"
 
 echo "==> NuGet"
 export NUGET_PACKAGES="$OFF/nuget"   # restaurarea scrie direct în folderul offline (format „feed” local)
@@ -58,19 +55,8 @@ cp package.json package-lock.json "$TMP/"
 rm -rf "$TMP"
 npm cache verify --cache "$OFF/npm-cache" >/dev/null
 
-echo "==> git bundle"
-cd "$ROOT"
-git bundle create "$OFF/repo/mdel.bundle" --all
-
-if $WITH_INSTALLERS; then
-  echo "==> Kituri de instalare Windows"
-  mkdir -p "$OFF/installers"
-  SDK_URL=$(curl -fsSL https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json |
-    python3 -c "import sys,json;r=json.load(sys.stdin)['releases'][0];print(next(f['url'] for f in r['sdk']['files'] if f['rid']=='win-x64' and f['name'].endswith('.exe')))")
-  curl -fsSL -o "$OFF/installers/$(basename "$SDK_URL")" "$SDK_URL"
-  NODE_MSI=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt | awk '/-x64\.msi$/{print $2}')
-  curl -fsSL -o "$OFF/installers/$NODE_MSI" "https://nodejs.org/dist/latest-v22.x/$NODE_MSI"
-fi
+# Logurile și fișierele temporare npm nu sunt necesare.
+rm -rf "$OFF/npm-cache/_logs" "$OFF/npm-cache/_update-notifier-last-checked" "$OFF/npm-cache/tmp"
 
 echo "==> Gata"
-du -sh "$OFF"/nuget "$OFF"/npm-cache "$OFF"/repo ${WITH_INSTALLERS:+"$OFF/installers"} 2>/dev/null || true
+du -sh "$OFF"/nuget "$OFF"/npm-cache

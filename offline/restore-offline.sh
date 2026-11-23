@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Restaurează dependențele backend și frontend din kitul offline (fără internet). Rulați din rădăcina repository-ului.
+# Restaurează dependențele backend și frontend din pachetele din offline/ (fără internet). Rulați din rădăcina repository-ului.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OFF="$ROOT/offline"
-[[ -d "$OFF/nuget" && -d "$OFF/npm-cache" ]] || { echo "Lipsesc offline/nuget sau offline/npm-cache – dezarhivați kitul offline (vezi offline/README.md)."; exit 1; }
+[[ -d "$OFF/nuget" && -d "$OFF/npm-cache" ]] || { echo "Lipsesc offline/nuget sau offline/npm-cache – regenerați-le cu offline/create-offline-bundle.sh (vezi offline/README.md)."; exit 1; }
 
 echo "==> Backend (NuGet doar din offline/nuget)"
 # Cale absolută: „dotnet ef migrations bundle” compilează un proiect temporar în afara repository-ului.
 cat > "$ROOT/backend/NuGet.config" <<XML
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generat de offline/restore-offline.sh: NuGet folosește doar kitul offline. Ștergeți fișierul pentru surse online. -->
+<!-- Generat de offline/restore-offline.sh: NuGet folosește doar pachetele din offline/. Ștergeți fișierul pentru surse online. -->
 <configuration>
   <packageSources>
     <clear />
