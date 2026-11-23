@@ -80,7 +80,8 @@
       "Retention": "Retenție",
       "General": "General",
       "InformGroup": "Grup de informare",
-      "Notifications": "Notificări email"
+      "Notifications": "Notificări email",
+      "Templates": "Șabloane email"
     },
     "fields": {
       "Ad_Domain": "Domeniu AD",
@@ -434,5 +435,78 @@
     "tomorrow": "mâine",
     "activation": "se activează",
     "expiration": "expiră"
+  },
+  "templates": {
+    "types": "Tipuri de mesaje",
+    "custom": "modificat",
+    "recipients": "Destinatari",
+    "subject": "Subiect",
+    "body": "Text",
+    "bodyHint": "Text simplu; o linie goală începe un paragraf nou. Detaliile delegării și butonul cu link se adaugă automat sub text.",
+    "fields": "Câmpuri disponibile (click pentru a insera)",
+    "fieldsHint": "Câmpurile se înlocuiesc la trimitere cu valorile delegării.",
+    "languageNote": "Șabloanele se aplică emailurilor în limba română. Destinatarii care au ales limba engleză primesc textul standard în engleză.",
+    "reset": "Restabilește textul implicit",
+    "saved": "Șablonul a fost salvat",
+    "preview": "Previzualizare",
+    "previewHint": "Exemplu cu date fictive. Linkul folosește adresa din Setări → General.",
+    "kinds": {
+      "Request": {
+        "name": "Cerere de aprobare",
+        "when": "La crearea unei delegări cu aprobare",
+        "to": "grupul de aprobatori"
+      },
+      "Pending": {
+        "name": "Cerere înregistrată (informare)",
+        "when": "La crearea unei delegări cu aprobare",
+        "to": "grupul de informare"
+      },
+      "Direct": {
+        "name": "Delegare fără aprobare",
+        "when": "La crearea unei delegări fără aprobare",
+        "to": "aprobatori, administratori, sursă, destinatar, grup de informare"
+      },
+      "Approved": {
+        "name": "Delegare aprobată",
+        "when": "Când un aprobator aprobă cererea",
+        "to": "administratori, sursă, destinatar, grup de informare"
+      },
+      "Rejected": {
+        "name": "Delegare respinsă",
+        "when": "Când un aprobator respinge cererea",
+        "to": "administratori, grup de informare"
+      },
+      "Activated": {
+        "name": "Forward activ",
+        "when": "La data de început, după aplicarea în Exchange",
+        "to": "administratori, sursă, destinatar, grup de informare"
+      },
+      "Expired": {
+        "name": "Forward expirat",
+        "when": "La data de sfârșit, după eliminarea din Exchange",
+        "to": "administratori, sursă, destinatar, grup de informare"
+      },
+      "Stopped": {
+        "name": "Delegare oprită",
+        "when": "Când un administrator oprește delegarea",
+        "to": "administratori, sursă, destinatar, grup de informare"
+      },
+      "Failed": {
+        "name": "Eroare Exchange",
+        "when": "Când aplicarea sau eliminarea în Exchange eșuează",
+        "to": "administratori"
+      }
+    },
+    "placeholders": {
+      "sursa": "numele utilizatorului sursă",
+      "destinatar": "numele destinatarului",
+      "id": "numărul delegării",
+      "inceput": "data și ora de început",
+      "sfarsit": "data și ora de sfârșit",
+      "motiv": "motivul (respingere, oprire, eroare)",
+      "inregistrat_de": "cine a înregistrat delegarea",
+      "aprobat_de": "cine a aprobat",
+      "observatii": "observațiile delegării"
+    }
   }
 }

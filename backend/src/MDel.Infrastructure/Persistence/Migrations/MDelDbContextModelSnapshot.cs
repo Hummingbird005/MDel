@@ -270,6 +270,150 @@ namespace MDel.Infrastructure.Persistence.Migrations
                             IsSecret = false,
                             UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
                             Value = ""
+                        },
+                        new
+                        {
+                            Key = "Templates.Request.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Cerere de aprobare: forward {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Request.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "A fost înregistrată o cerere de forward care necesită aprobarea dumneavoastră. Este suficientă aprobarea unui singur membru al grupului."
+                        },
+                        new
+                        {
+                            Key = "Templates.Pending.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Cerere de forward înregistrată: {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Pending.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "A fost înregistrată o cerere de forward, aflată în așteptarea aprobării. Mesajul este doar informativ."
+                        },
+                        new
+                        {
+                            Key = "Templates.Direct.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Forward înregistrat fără aprobare: {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Direct.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "A fost înregistrat un forward fără aprobare. Mesajul este doar informativ."
+                        },
+                        new
+                        {
+                            Key = "Templates.Approved.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Forward aprobat: {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Approved.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "Cererea de forward a fost aprobată de {aprobat_de}."
+                        },
+                        new
+                        {
+                            Key = "Templates.Rejected.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Forward respins: {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Rejected.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "Cererea de forward a fost respinsă."
+                        },
+                        new
+                        {
+                            Key = "Templates.Activated.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Forward activ: {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Activated.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "Forwardul a fost aplicat în Exchange și este activ până la {sfarsit}."
+                        },
+                        new
+                        {
+                            Key = "Templates.Expired.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Forward expirat: {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Expired.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "Perioada s-a încheiat, iar forwardul a fost eliminat automat din Exchange."
+                        },
+                        new
+                        {
+                            Key = "Templates.Stopped.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Forward oprit: {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Stopped.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "Forwardul a fost oprit de un administrator."
+                        },
+                        new
+                        {
+                            Key = "Templates.Failed.Subject",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "[MDel] Eroare forward: {sursa} → {destinatar} (#{id})"
+                        },
+                        new
+                        {
+                            Key = "Templates.Failed.Body",
+                            Category = "Templates",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "Operația în Exchange a eșuat și necesită intervenția unui administrator."
                         });
                 });
 

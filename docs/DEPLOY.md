@@ -97,6 +97,7 @@ La fiecare versiune nouă: rulați din nou `efbundle.exe` (aplică doar migrări
    5. **Fișiere** – calea de stocare → Testează (scriere/citire/ștergere).
    6. **General** – adresa aplicației (pentru link-urile din emailuri), limba implicită.
    7. **Grup de informare** – utilizatorii care primesc toate notificările.
+   8. **Șabloane email** (opțional) – adaptați textul mesajelor în română; verificați în previzualizare.
 3. Rulați checklist-ul din [UAT.md](UAT.md).
 
 ## 8. Operare

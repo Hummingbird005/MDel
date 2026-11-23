@@ -80,7 +80,8 @@
       "Retention": "Retention",
       "General": "General",
       "InformGroup": "Inform group",
-      "Notifications": "Email notifications"
+      "Notifications": "Email notifications",
+      "Templates": "Email templates"
     },
     "fields": {
       "Ad_Domain": "AD domain",
@@ -428,5 +429,78 @@
     "tomorrow": "tomorrow",
     "activation": "starts",
     "expiration": "expires"
+  },
+  "templates": {
+    "types": "Message types",
+    "custom": "edited",
+    "recipients": "Recipients",
+    "subject": "Subject",
+    "body": "Text",
+    "bodyHint": "Plain text; a blank line starts a new paragraph. Delegation details and the link button are added automatically below the text.",
+    "fields": "Available fields (click to insert)",
+    "fieldsHint": "Fields are replaced with the delegation's values when sending.",
+    "languageNote": "Templates apply to emails in Romanian. Recipients who chose English receive the standard English text.",
+    "reset": "Restore default text",
+    "saved": "The template was saved",
+    "preview": "Preview",
+    "previewHint": "Example with sample data. The link uses the address from Settings → General.",
+    "kinds": {
+      "Request": {
+        "name": "Approval request",
+        "when": "When a delegation with approval is created",
+        "to": "approvers group"
+      },
+      "Pending": {
+        "name": "Request registered (information)",
+        "when": "When a delegation with approval is created",
+        "to": "inform group"
+      },
+      "Direct": {
+        "name": "Delegation without approval",
+        "when": "When a delegation without approval is created",
+        "to": "approvers, administrators, source, target, inform group"
+      },
+      "Approved": {
+        "name": "Delegation approved",
+        "when": "When an approver approves the request",
+        "to": "administrators, source, target, inform group"
+      },
+      "Rejected": {
+        "name": "Delegation rejected",
+        "when": "When an approver rejects the request",
+        "to": "administrators, inform group"
+      },
+      "Activated": {
+        "name": "Forward active",
+        "when": "At the start date, after applying it in Exchange",
+        "to": "administrators, source, target, inform group"
+      },
+      "Expired": {
+        "name": "Forward expired",
+        "when": "At the end date, after removing it from Exchange",
+        "to": "administrators, source, target, inform group"
+      },
+      "Stopped": {
+        "name": "Delegation stopped",
+        "when": "When an administrator stops the delegation",
+        "to": "administrators, source, target, inform group"
+      },
+      "Failed": {
+        "name": "Exchange error",
+        "when": "When applying or removing the forward in Exchange fails",
+        "to": "administrators"
+      }
+    },
+    "placeholders": {
+      "sursa": "source user name",
+      "destinatar": "target user name",
+      "id": "delegation number",
+      "inceput": "start date and time",
+      "sfarsit": "end date and time",
+      "motiv": "reason (rejection, stop, error)",
+      "inregistrat_de": "who registered the delegation",
+      "aprobat_de": "who approved",
+      "observatii": "delegation notes"
+    }
   }
 }

@@ -5,39 +5,98 @@ using MDel.Domain.Enums;
 
 namespace MDel.Infrastructure.Notifications;
 
-/// <summary>Șabloanele emailurilor de notificare, în română și engleză.</summary>
+/// <summary>Tipul de mesaj – câte un șablon (subiect + text) pentru fiecare.</summary>
+public enum TemplateKind
+{
+    /// <summary>Cerere de aprobare, către grupul de aprobatori.</summary>
+    Request,
+    /// <summary>Cerere cu aprobare, pentru cei doar informați (grupul de informare).</summary>
+    Pending,
+    /// <summary>Delegare înregistrată fără aprobare.</summary>
+    Direct,
+    Approved,
+    Rejected,
+    Activated,
+    Expired,
+    Stopped,
+    Failed,
+}
+
+/// <summary>
+/// Șabloanele emailurilor de notificare. Cele în română se pot modifica din Setări → Șabloane email
+/// (AppSettings „Templates.{Tip}.Subject/Body”); cele în engleză sunt fixe.
+/// Textul folosește câmpuri {nume}; tabelul cu detaliile delegării și butonul cu link se adaugă automat.
+/// </summary>
 public static class NotificationTemplates
 {
-    private sealed record Texts(string Subject, string Intro);
+    public sealed record Template(string Subject, string Body);
 
-    // Variante pentru Created: "request" (aprobatori), "pending" (informați despre o cerere cu aprobare), "direct" (fără aprobare).
-    private static readonly Dictionary<(NotificationEvent, string Variant, string Lang), Texts> Map = new()
+    /// <summary>Câmpurile disponibile în șabloane.</summary>
+    public static readonly IReadOnlyList<string> Placeholders =
+        ["sursa", "destinatar", "id", "inceput", "sfarsit", "motiv", "inregistrat_de", "aprobat_de", "observatii"];
+
+    public const int MaxSubjectLength = 300;
+    public const int MaxBodyLength = 4000;
+
+    public static string SubjectKey(TemplateKind kind) => $"Templates.{kind}.Subject";
+    public static string BodyKey(TemplateKind kind) => $"Templates.{kind}.Body";
+
+    public static readonly IReadOnlyDictionary<TemplateKind, Template> RomanianDefaults = new Dictionary<TemplateKind, Template>
     {
-        [(NotificationEvent.Created, "request", "ro")] = new("Cerere de aprobare: forward {0} → {1} (#{2})",
+        [TemplateKind.Request] = new("[MDel] Cerere de aprobare: forward {sursa} → {destinatar} (#{id})",
             "A fost înregistrată o cerere de forward care necesită aprobarea dumneavoastră. Este suficientă aprobarea unui singur membru al grupului."),
-        [(NotificationEvent.Created, "request", "en")] = new("Approval request: forward {0} → {1} (#{2})",
-            "A forwarding request needs your approval. One approval from any member of the group is enough."),
-        [(NotificationEvent.Created, "pending", "ro")] = new("Cerere de forward înregistrată: {0} → {1} (#{2})",
+        [TemplateKind.Pending] = new("[MDel] Cerere de forward înregistrată: {sursa} → {destinatar} (#{id})",
             "A fost înregistrată o cerere de forward, aflată în așteptarea aprobării. Mesajul este doar informativ."),
-        [(NotificationEvent.Created, "pending", "en")] = new("Forwarding request registered: {0} → {1} (#{2})",
-            "A forwarding request was registered and is waiting for approval. This message is for your information only."),
-        [(NotificationEvent.Created, "direct", "ro")] = new("Forward înregistrat fără aprobare: {0} → {1} (#{2})",
+        [TemplateKind.Direct] = new("[MDel] Forward înregistrat fără aprobare: {sursa} → {destinatar} (#{id})",
             "A fost înregistrat un forward fără aprobare. Mesajul este doar informativ."),
-        [(NotificationEvent.Created, "direct", "en")] = new("Forwarding registered without approval: {0} → {1} (#{2})",
-            "A forward was registered without approval. This message is for your information only."),
-        [(NotificationEvent.Approved, "", "ro")] = new("Forward aprobat: {0} → {1} (#{2})", "Cererea de forward a fost aprobată."),
-        [(NotificationEvent.Approved, "", "en")] = new("Forwarding approved: {0} → {1} (#{2})", "The forwarding request was approved."),
-        [(NotificationEvent.Rejected, "", "ro")] = new("Forward respins: {0} → {1} (#{2})", "Cererea de forward a fost respinsă."),
-        [(NotificationEvent.Rejected, "", "en")] = new("Forwarding rejected: {0} → {1} (#{2})", "The forwarding request was rejected."),
-        [(NotificationEvent.Activated, "", "ro")] = new("Forward activ: {0} → {1} (#{2})", "Forwardul a fost aplicat în Exchange și este activ."),
-        [(NotificationEvent.Activated, "", "en")] = new("Forwarding active: {0} → {1} (#{2})", "The forward was applied in Exchange and is now active."),
-        [(NotificationEvent.Expired, "", "ro")] = new("Forward expirat: {0} → {1} (#{2})", "Perioada s-a încheiat, iar forwardul a fost eliminat automat din Exchange."),
-        [(NotificationEvent.Expired, "", "en")] = new("Forwarding expired: {0} → {1} (#{2})", "The period ended and the forward was removed from Exchange automatically."),
-        [(NotificationEvent.Stopped, "", "ro")] = new("Forward oprit: {0} → {1} (#{2})", "Forwardul a fost oprit de un administrator."),
-        [(NotificationEvent.Stopped, "", "en")] = new("Forwarding stopped: {0} → {1} (#{2})", "The forward was stopped by an administrator."),
-        [(NotificationEvent.Failed, "", "ro")] = new("Eroare forward: {0} → {1} (#{2})", "Operația în Exchange a eșuat și necesită intervenția unui administrator."),
-        [(NotificationEvent.Failed, "", "en")] = new("Forwarding error: {0} → {1} (#{2})", "The Exchange operation failed and needs an administrator."),
+        [TemplateKind.Approved] = new("[MDel] Forward aprobat: {sursa} → {destinatar} (#{id})", "Cererea de forward a fost aprobată de {aprobat_de}."),
+        [TemplateKind.Rejected] = new("[MDel] Forward respins: {sursa} → {destinatar} (#{id})", "Cererea de forward a fost respinsă."),
+        [TemplateKind.Activated] = new("[MDel] Forward activ: {sursa} → {destinatar} (#{id})",
+            "Forwardul a fost aplicat în Exchange și este activ până la {sfarsit}."),
+        [TemplateKind.Expired] = new("[MDel] Forward expirat: {sursa} → {destinatar} (#{id})",
+            "Perioada s-a încheiat, iar forwardul a fost eliminat automat din Exchange."),
+        [TemplateKind.Stopped] = new("[MDel] Forward oprit: {sursa} → {destinatar} (#{id})", "Forwardul a fost oprit de un administrator."),
+        [TemplateKind.Failed] = new("[MDel] Eroare forward: {sursa} → {destinatar} (#{id})",
+            "Operația în Exchange a eșuat și necesită intervenția unui administrator."),
     };
+
+    private static readonly Dictionary<TemplateKind, Template> EnglishTemplates = new()
+    {
+        [TemplateKind.Request] = new("[MDel] Approval request: forward {sursa} → {destinatar} (#{id})",
+            "A forwarding request needs your approval. One approval from any member of the group is enough."),
+        [TemplateKind.Pending] = new("[MDel] Forwarding request registered: {sursa} → {destinatar} (#{id})",
+            "A forwarding request was registered and is waiting for approval. This message is for your information only."),
+        [TemplateKind.Direct] = new("[MDel] Forwarding registered without approval: {sursa} → {destinatar} (#{id})",
+            "A forward was registered without approval. This message is for your information only."),
+        [TemplateKind.Approved] = new("[MDel] Forwarding approved: {sursa} → {destinatar} (#{id})", "The forwarding request was approved by {aprobat_de}."),
+        [TemplateKind.Rejected] = new("[MDel] Forwarding rejected: {sursa} → {destinatar} (#{id})", "The forwarding request was rejected."),
+        [TemplateKind.Activated] = new("[MDel] Forwarding active: {sursa} → {destinatar} (#{id})",
+            "The forward was applied in Exchange and is active until {sfarsit}."),
+        [TemplateKind.Expired] = new("[MDel] Forwarding expired: {sursa} → {destinatar} (#{id})",
+            "The period ended and the forward was removed from Exchange automatically."),
+        [TemplateKind.Stopped] = new("[MDel] Forwarding stopped: {sursa} → {destinatar} (#{id})", "The forward was stopped by an administrator."),
+        [TemplateKind.Failed] = new("[MDel] Forwarding error: {sursa} → {destinatar} (#{id})",
+            "The Exchange operation failed and needs an administrator."),
+    };
+
+    public static TemplateKind KindFor(NotificationEvent ev, bool actionRequired, bool requiresApproval) => ev switch
+    {
+        NotificationEvent.Created => actionRequired ? TemplateKind.Request : requiresApproval ? TemplateKind.Pending : TemplateKind.Direct,
+        NotificationEvent.Approved => TemplateKind.Approved,
+        NotificationEvent.Rejected => TemplateKind.Rejected,
+        NotificationEvent.Activated => TemplateKind.Activated,
+        NotificationEvent.Expired => TemplateKind.Expired,
+        NotificationEvent.Stopped => TemplateKind.Stopped,
+        _ => TemplateKind.Failed,
+    };
+
+    /// <summary>Câmpurile {nume} necunoscute dintr-un text (pentru validarea din Setări).</summary>
+    public static IReadOnlyList<string> UnknownPlaceholders(string text) =>
+        System.Text.RegularExpressions.Regex.Matches(text, @"\{([^{}]*)\}")
+            .Select(m => m.Groups[1].Value)
+            .Where(name => !Placeholders.Contains(name))
+            .Distinct()
+            .ToList();
 
     private static readonly Dictionary<string, Dictionary<string, string>> Labels = new()
     {
@@ -59,31 +118,50 @@ public static class NotificationTemplates
 
     private static readonly TimeZoneInfo Zone = FindZone();
 
+    /// <param name="romanian">Șablonul românesc din Setări (null = implicit). Ignorat pentru limba engleză.</param>
     public static (string Subject, string HtmlBody) Render(
-        Delegation d, NotificationEvent ev, bool actionRequired, string lang, string? reason, string? baseUrl)
+        Delegation d, TemplateKind kind, string lang, string? reason, string? baseUrl, Template? romanian = null)
     {
         lang = lang == "en" ? "en" : "ro";
-        var variant = ev != NotificationEvent.Created ? "" : actionRequired ? "request" : d.RequiresApproval ? "pending" : "direct";
-        var texts = Map[(ev, variant, lang)];
+        var template = lang == "en" ? EnglishTemplates[kind] : romanian ?? RomanianDefaults[kind];
         var l = Labels[lang];
         var culture = CultureInfo.GetCultureInfo(lang == "en" ? "en-GB" : "ro-RO");
 
-        var subject = "[MDel] " + string.Format(culture, texts.Subject, d.FromUser.DisplayName, d.ToUser.DisplayName, d.Id);
+        string Date(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(utc, Zone).ToString("dd.MM.yyyy HH:mm", culture);
+
+        var values = new Dictionary<string, string>
+        {
+            ["sursa"] = d.FromUser.DisplayName,
+            ["destinatar"] = d.ToUser.DisplayName,
+            ["id"] = d.Id.ToString(CultureInfo.InvariantCulture),
+            ["inceput"] = Date(d.StartUtc),
+            ["sfarsit"] = Date(d.EndUtc),
+            ["motiv"] = reason ?? string.Empty,
+            ["inregistrat_de"] = d.CreatedBy?.DisplayName ?? string.Empty,
+            ["aprobat_de"] = d.ApprovedBy?.DisplayName ?? string.Empty,
+            ["observatii"] = d.Notes ?? string.Empty,
+        };
+
+        // Subiectul e text simplu (fără linii noi); corpul se escapează și primește paragrafe.
+        var subject = Fill(template.Subject, values).ReplaceLineEndings(" ").Trim();
+        if (subject.Length > MaxSubjectLength) subject = subject[..MaxSubjectLength];
+        var intro = string.Join(string.Empty, Fill(template.Body, values)
+            .ReplaceLineEndings("\n")
+            .Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(p => $"<p style=\"margin:0 0 12px\">{H(p).Replace("\n", "<br>")}</p>"));
 
         string Row(string label, string? value) => string.IsNullOrWhiteSpace(value) ? string.Empty :
             $"<tr><td style=\"padding:6px 12px 6px 0;color:#64748b;white-space:nowrap;vertical-align:top\">{H(label)}</td>" +
             $"<td style=\"padding:6px 0;color:#0f172a\">{H(value)}</td></tr>";
 
-        string Date(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(utc, Zone).ToString("dd.MM.yyyy HH:mm", culture);
-
         var link = string.IsNullOrWhiteSpace(baseUrl) ? null : $"{baseUrl.TrimEnd('/')}/delegations/{d.Id}";
         var button = link is null ? string.Empty :
             $"<p style=\"margin:24px 0 0\"><a href=\"{H(link)}\" style=\"display:inline-block;background:#4f46e5;color:#ffffff;" +
-            $"text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600\">{H(actionRequired ? l["approve"] : l["open"])}</a></p>";
+            $"text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600\">{H(kind == TemplateKind.Request ? l["approve"] : l["open"])}</a></p>";
 
         var body = $"""
             <div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.5;color:#0f172a;max-width:600px">
-              <p style="margin:0 0 16px">{H(texts.Intro)}</p>
+              {intro}
               <table style="border-collapse:collapse;font-size:14px">
                 {Row(l["from"], $"{d.FromUser.DisplayName} <{d.FromUser.Email ?? d.FromUser.SamAccountName}>")}
                 {Row(l["to"], $"{d.ToUser.DisplayName} <{d.ToUser.Email ?? d.ToUser.SamAccountName}>")}
@@ -101,6 +179,10 @@ public static class NotificationTemplates
 
         return (subject, body);
     }
+
+    private static string Fill(string text, IReadOnlyDictionary<string, string> values) =>
+        System.Text.RegularExpressions.Regex.Replace(text, @"\{([a-z_]+)\}",
+            m => values.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value);
 
     private static string H(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 

@@ -10,6 +10,7 @@ import type { PickedUser } from '../../components/pickedUser'
 import { Alert, Avatar, Button, Card, CardHeader, EmptyState, Field, IconButton, inputClass, Spinner } from '../../components/ui/primitives'
 import { useToast } from '../../components/ui/toast'
 import { UserPicker } from '../../components/UserPicker'
+import { TemplatesPanel } from './TemplatesPanel'
 import { cx } from '../../lib/cx'
 import { formatDateTime } from '../../lib/format'
 
@@ -21,6 +22,7 @@ const tabs: { id: string; test?: TestTarget }[] = [
   { id: 'Groups' },
   { id: 'InformGroup' },
   { id: 'Notifications' },
+  { id: 'Templates' },
   { id: 'Exchange', test: 'exchange' },
   { id: 'Smtp', test: 'smtp' },
   { id: 'Attachments', test: 'storage' },
@@ -72,6 +74,8 @@ export function AdminPage() {
         <InformGroupPanel />
       ) : tab === 'Notifications' ? (
         <NotificationsPanel />
+      ) : tab === 'Templates' ? (
+        query.data ? <TemplatesPanel settings={query.data.settings} /> : <Spinner />
       ) : query.isLoading ? (
         <Spinner />
       ) : query.isError || !query.data ? (

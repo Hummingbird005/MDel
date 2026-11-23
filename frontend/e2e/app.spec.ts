@@ -62,3 +62,23 @@ test('pe telefon pagina nu are scroll orizontal', async ({ browser }) => {
   }
   await context.close()
 })
+
+test('șablonul de email se editează în română, cu previzualizare', async ({ browser }) => {
+  const page = await (await browser.newContext({ extraHTTPHeaders: ADMIN })).newPage()
+  await page.goto('/admin')
+  await page.getByRole('tab', { name: 'Șabloane email' }).click()
+  await page.getByRole('option', { name: /Delegare respinsă/ }).click()
+  await page.locator('#template-subject').fill('Cererea #{id} a fost respinsă')
+  await page.locator('#template-body').fill('Cererea pentru {sursa} a fost respinsă.\nMotiv: ')
+  await page.getByRole('button', { name: '{motiv}' }).click()
+  await expect(page.frameLocator('iframe').getByText('Motiv: Revenire anticipată din concediu')).toBeVisible()
+  await expect(page.getByText('Cererea #1024 a fost respinsă')).toBeVisible()
+  await page.getByRole('button', { name: 'Salvează' }).click()
+  await expect(page.getByText('Șablonul a fost salvat')).toBeVisible()
+
+  // Câmp necunoscut: previzualizarea arată eroarea.
+  await page.locator('#template-body').fill('Text cu {necunoscut}')
+  await expect(page.getByText(/Unknown fields/).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Restabilește textul implicit' }).click()
+  await expect(page.locator('#template-body')).toHaveValue('Cererea de forward a fost respinsă.')
+})

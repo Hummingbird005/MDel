@@ -117,6 +117,67 @@ public sealed class AdminController(
     public async Task<IActionResult> RemoveInformMember(int memberId, CancellationToken ct) =>
         await informGroup.RemoveAsync(memberId, ct) ? NoContent() : NotFound();
 
+    // ------------------------------------------------------------------ șabloane email (română)
+
+    public sealed record TemplateMeta(TemplateKind Kind, string SubjectKey, string BodyKey, string DefaultSubject, string DefaultBody);
+
+    public sealed record TemplatesMeta(IReadOnlyList<TemplateMeta> Templates, IReadOnlyList<string> Placeholders);
+
+    public sealed record TemplatePreviewRequest(TemplateKind Kind, string? Subject, string? Body);
+
+    public sealed record TemplatePreview(string Subject, string Html);
+
+    [HttpGet("templates")]
+    public TemplatesMeta Templates() => new(
+        Enum.GetValues<TemplateKind>().Select(k => new TemplateMeta(k,
+            NotificationTemplates.SubjectKey(k), NotificationTemplates.BodyKey(k),
+            NotificationTemplates.RomanianDefaults[k].Subject, NotificationTemplates.RomanianDefaults[k].Body)).ToList(),
+        NotificationTemplates.Placeholders);
+
+    /// <summary>Previzualizare cu o delegare de exemplu (nu salvează nimic).</summary>
+    [HttpPost("templates/preview")]
+    public async Task<ActionResult<TemplatePreview>> PreviewTemplate(TemplatePreviewRequest request, CancellationToken ct)
+    {
+        var defaults = NotificationTemplates.RomanianDefaults[request.Kind];
+        var subject = string.IsNullOrWhiteSpace(request.Subject) ? defaults.Subject : request.Subject;
+        var body = string.IsNullOrWhiteSpace(request.Body) ? defaults.Body : request.Body;
+
+        var errors = new[] { (Key: "subject", Text: subject), (Key: "body", Text: body) }
+            .Select(x => (x.Key, Unknown: NotificationTemplates.UnknownPlaceholders(x.Text)))
+            .Where(x => x.Unknown.Count > 0)
+            .ToList();
+        foreach (var (key, unknown) in errors)
+            ModelState.AddModelError(key, $"Unknown fields: {string.Join(", ", unknown.Select(u => "{" + u + "}"))}");
+        if (errors.Count > 0) return ValidationProblem(ModelState);
+
+        var sample = SampleDelegation(request.Kind);
+        var baseUrl = await settings.GetAsync(Domain.SettingKeys.AppBaseUrl, ct);
+        var reason = request.Kind is TemplateKind.Rejected or TemplateKind.Stopped or TemplateKind.Failed
+            ? "Revenire anticipată din concediu" : null;
+        var (renderedSubject, html) = NotificationTemplates.Render(sample, request.Kind, "ro", reason,
+            string.IsNullOrWhiteSpace(baseUrl) ? "https://mdel.contoso.local" : baseUrl,
+            new NotificationTemplates.Template(subject, body));
+        return new TemplatePreview(renderedSubject, html);
+    }
+
+    private static Domain.Entities.Delegation SampleDelegation(TemplateKind kind)
+    {
+        var start = DateTime.UtcNow.Date.AddDays(1).AddHours(7);
+        return new Domain.Entities.Delegation
+        {
+            Id = 1024,
+            FromUser = new Domain.Entities.AppUser { DisplayName = "Ion Popescu", Email = "ion.popescu@contoso.local", SamAccountName = "ion.popescu" },
+            ToUser = new Domain.Entities.AppUser { DisplayName = "Maria Ionescu", Email = "maria.ionescu@contoso.local", SamAccountName = "maria.ionescu" },
+            CreatedBy = new Domain.Entities.AppUser { DisplayName = "Mihai Stan" },
+            ApprovedBy = kind is TemplateKind.Request or TemplateKind.Pending or TemplateKind.Direct or TemplateKind.Rejected
+                ? null : new Domain.Entities.AppUser { DisplayName = "Andrei Dumitrescu" },
+            StartUtc = start,
+            EndUtc = start.AddDays(7).AddHours(8),
+            RequiresApproval = kind != TemplateKind.Direct,
+            Notes = "Concediu de odihnă",
+        };
+    }
+
     // ------------------------------------------------------------------ coada de emailuri
 
     [HttpGet("notifications")]

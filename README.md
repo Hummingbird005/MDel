@@ -19,6 +19,8 @@ Date de exemplu, rulare locală (AD, Exchange și SMTP simulate).
 | ![Aprobări](docs/images/approvals.png) | ![Audit](docs/images/audit-dark.png) |
 | **Delegări** – filtre, sortare, export CSV | **Setări → Exchange** cu test de conexiune |
 | ![Delegări](docs/images/delegations-light.png) | ![Setări Exchange](docs/images/settings-exchange.png) |
+| **Setări → Șabloane email** (română, cu previzualizare) | |
+| ![Șabloane email](docs/images/settings-templates.png) | |
 
 <p>
   <img src="docs/images/dashboard-dark.png" alt="Dashboard (dark)" width="72%">
@@ -125,6 +127,11 @@ Administrare → Fișiere.
 - Destinatari: aprobatori, administratori (`Groups.AdminsEmail`), utilizatorul sursă, destinatarul și
   **grupul de informare** (utilizatori adăugați din Setări → Grup de informare).
 - `General.BaseUrl` (Setări → General) adaugă în emailuri link direct către delegare.
+- **Setări → Șabloane email**: subiectul și textul fiecărui tip de mesaj (cerere de aprobare, aprobată, respinsă,
+  activă, expirată, oprită, eroare…), în **română**, cu câmpuri `{sursa}`, `{destinatar}`, `{id}`, `{inceput}`,
+  `{sfarsit}`, `{motiv}`, `{inregistrat_de}`, `{aprobat_de}`, `{observatii}` și previzualizare. Detaliile delegării și
+  butonul cu link se adaugă automat; textul se escapează (nu se poate injecta HTML). Un câmp golit revine la textul
+  implicit. Destinatarii cu limba engleză primesc textul standard în engleză.
 
 ## Activare și expirare automată (etapa 4)
 

@@ -36,7 +36,9 @@ public sealed class NotificationService(MDelDbContext db, ISettingsService setti
         {
             var lang = r.User?.PreferredLanguage ?? defaultLang;
             var actionRequired = ev == NotificationEvent.Created && d.RequiresApproval && r.Type == RecipientType.ApproverGroup;
-            var (subject, body) = NotificationTemplates.Render(d, ev, actionRequired, lang, reason, baseUrl);
+            var kind = NotificationTemplates.KindFor(ev, actionRequired, d.RequiresApproval);
+            var romanian = lang == "en" ? null : await RomanianTemplateAsync(kind, ct);
+            var (subject, body) = NotificationTemplates.Render(d, kind, lang, reason, baseUrl, romanian);
             var missing = r.Email == NotConfigured;
 
             d.Notifications.Add(new DelegationNotification
@@ -56,6 +58,17 @@ public sealed class NotificationService(MDelDbContext db, ISettingsService setti
         }
 
         signal.Notify();
+    }
+
+    /// <summary>Șablonul din Setări → Șabloane email; un câmp gol înseamnă textul implicit.</summary>
+    private async Task<NotificationTemplates.Template> RomanianTemplateAsync(TemplateKind kind, CancellationToken ct)
+    {
+        var defaults = NotificationTemplates.RomanianDefaults[kind];
+        var subject = await settings.GetAsync(NotificationTemplates.SubjectKey(kind), ct);
+        var body = await settings.GetAsync(NotificationTemplates.BodyKey(kind), ct);
+        return new NotificationTemplates.Template(
+            string.IsNullOrWhiteSpace(subject) ? defaults.Subject : subject,
+            string.IsNullOrWhiteSpace(body) ? defaults.Body : body);
     }
 
     private sealed record Recipient(string Email, RecipientType Type, AppUser? User);
