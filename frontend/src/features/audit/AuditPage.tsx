@@ -323,7 +323,13 @@ function AuditDetailPanel({ id, onClose }: { id: number; onClose: () => void }) 
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
               <dt className="text-muted">{t('audit.user')}</dt>
               <dd>
-                {d.userDisplayName ?? d.userName} <span className="font-mono text-xs text-muted">{d.userName}</span>
+                {d.userName === 'system' ? (
+                  t('detail.system')
+                ) : (
+                  <>
+                    {d.userDisplayName ?? d.userName} <span className="font-mono text-xs text-muted">{d.userName}</span>
+                  </>
+                )}
               </dd>
               <dt className="text-muted">{t('audit.actionCode')}</dt>
               <dd className="font-mono text-xs">{d.action}</dd>

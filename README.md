@@ -4,6 +4,28 @@ Aplicație prin care administratorii de sistem configurează forwardul de email
 de pe căsuța unui utilizator către altul, cu aprobare, programare și expirare automată.
 Planul complet: [PLAN.md](PLAN.md).
 
+## Capturi de ecran
+
+Date de exemplu, rulare locală (AD, Exchange și SMTP simulate).
+
+**Dashboard** – carduri KPI, activările și expirările din următoarele 7 zile, ultimele delegări:
+
+![Dashboard (light)](docs/images/dashboard-light.png)
+
+| Delegare nouă (panou lateral) | Detaliul unei delegări (dark) |
+|---|---|
+| ![Delegare nouă](docs/images/new-delegation.png) | ![Detaliu delegare](docs/images/delegation-detail-dark.png) |
+| **Aprobări** (grupul de aprobatori) | **Istoric / Audit** cu valori vechi/noi |
+| ![Aprobări](docs/images/approvals.png) | ![Audit](docs/images/audit-dark.png) |
+| **Delegări** – filtre, sortare, export CSV | **Setări → Exchange** cu test de conexiune |
+| ![Delegări](docs/images/delegations-light.png) | ![Setări Exchange](docs/images/settings-exchange.png) |
+
+<p>
+  <img src="docs/images/dashboard-dark.png" alt="Dashboard (dark)" width="72%">
+  &nbsp;
+  <img src="docs/images/phone-dark.png" alt="Telefon (dark)" width="22%">
+</p>
+
 ## Structură
 
 ```
@@ -12,9 +34,11 @@ backend/                     ASP.NET Core (.NET 10)
   src/MDel.Application       interfețe: IDirectoryService, IExchangeService, IMailService, IAuditService, ICurrentUser
   src/MDel.Infrastructure    EF Core (MDelDbContext + migrații), audit, setări, integrări AD/Exchange/SMTP
   src/MDel.Api               Web API, autentificare AD, middleware audit, servire SPA
-  tests/MDel.Tests           xUnit (model EF, API)
+  tests/MDel.Tests           xUnit (model EF, API, reguli, notificări, scheduler, audit)
 frontend/                    React + TypeScript (Vite), Tailwind CSS, lucide-react, React Query, i18next (ro/en)
-scripts/                     PowerShell: rol RBAC minim + smoke-test Exchange (vezi scripts/README.md)
+  e2e/                       teste end-to-end Playwright
+scripts/                     rol RBAC Exchange, smoke-test Exchange, publicare (Publish-MDel.ps1 / publish.sh)
+docs/                        DEPLOY.md (instalare IIS), UAT.md (checklist de acceptanță), capturi
 ```
 
 ## Baza de date (EF Core, code-first)
