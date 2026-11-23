@@ -3,6 +3,8 @@ using MDel.Domain;
 using MDel.Domain.Entities;
 using MDel.Domain.Enums;
 using MDel.Infrastructure.Localization;
+using MDel.Infrastructure.Notifications;
+using MDel.Application.Common;
 using MDel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +18,7 @@ public sealed class DelegationService(
     ISettingsService settings,
     UserProvisioningService users,
     ForwardingManager forwarding,
+    NotificationService notifications,
     ICurrentUser currentUser,
     IAuditService audit,
     TimeProvider time)
@@ -153,13 +156,16 @@ public sealed class DelegationService(
         await audit.WriteAsync(new AuditEntry("Delegation.Created", nameof(Delegation), d.Id.ToString(),
             NewValues: Snapshot(d)), ct);
 
+        // Cu aprobare: cerere către aprobatori. Fără aprobare: aprobatorii sunt doar informați.
+        await notifications.EnqueueAsync(d, NotificationEvent.Created, d.Notes, ct);
+
         // Fără aprobare și cu startul atins: se activează imediat.
-        if (!d.RequiresApproval && d.StartUtc <= now)
+        if (!d.RequiresApproval && d.StartUtc <= now && !await forwarding.ApplyAsync(d, currentUser.UserId, ct))
         {
-            await forwarding.ApplyAsync(d, currentUser.UserId, ct);
-            await db.SaveChangesAsync(ct);
+            await notifications.EnqueueAsync(d, NotificationEvent.Failed, d.LastError, ct);
         }
 
+        await db.SaveChangesAsync(ct);
         return d.Id;
     }
 
@@ -193,6 +199,7 @@ public sealed class DelegationService(
                     d.ApprovedById = null;
                     d.ApprovedUtc = null;
                     d.TransitionTo(DelegationStatus.PendingApproval, currentUser.UserId, now, Messages.Get("EditedReapproval"));
+                    await notifications.EnqueueAsync(d, NotificationEvent.Created, Messages.Get("EditedReapproval"), ct);
                 }
 
                 break;
@@ -227,9 +234,76 @@ public sealed class DelegationService(
 
         if (d.Status == DelegationStatus.Scheduled && d.StartUtc <= now)
         {
-            await forwarding.ApplyAsync(d, currentUser.UserId, ct);
+            if (!await forwarding.ApplyAsync(d, currentUser.UserId, ct))
+                await notifications.EnqueueAsync(d, NotificationEvent.Failed, d.LastError, ct);
             await SaveAsync(ct);
         }
+    }
+
+    // ------------------------------------------------------------------ aprobare
+
+    /// <summary>Un singur aprobator din grup este suficient; al doilea primește conflict.</summary>
+    public async Task ApproveAsync(int id, string? rowVersion, CancellationToken ct)
+    {
+        var d = await LoadForUpdateAsync(id, rowVersion, ct);
+        await EnsureCanDecideAsync(d, ct);
+
+        var now = Now;
+        if (d.EndUtc <= now) throw new DelegationConflictException(Messages.Get("ApprovalTooLate"));
+
+        d.ApprovedById = RequireUserId();
+        d.ApprovedUtc = now;
+        d.TransitionTo(DelegationStatus.Scheduled, d.ApprovedById, now, Messages.Get("Approved"));
+        await SaveAsync(ct); // aici al doilea aprobator simultan primește DbUpdateConcurrencyException -> 409
+
+        await audit.WriteAsync(new AuditEntry("Delegation.Approved", nameof(Delegation), d.Id.ToString(),
+            NewValues: Snapshot(d)), ct);
+        await notifications.EnqueueAsync(d, NotificationEvent.Approved, null, ct);
+
+        if (d.StartUtc <= now && !await forwarding.ApplyAsync(d, currentUser.UserId, ct))
+        {
+            await notifications.EnqueueAsync(d, NotificationEvent.Failed, d.LastError, ct);
+        }
+
+        await SaveAsync(ct);
+    }
+
+    public async Task RejectAsync(int id, string reason, string? rowVersion, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) throw Invalid(nameof(reason), Messages.Get("ReasonRequired"));
+
+        var d = await LoadForUpdateAsync(id, rowVersion, ct);
+        await EnsureCanDecideAsync(d, ct);
+
+        reason = reason.Trim();
+        d.RejectReason = reason.Length > 1000 ? reason[..1000] : reason;
+        d.TransitionTo(DelegationStatus.Rejected, RequireUserId(), Now, d.RejectReason);
+        await notifications.EnqueueAsync(d, NotificationEvent.Rejected, d.RejectReason, ct);
+        await SaveAsync(ct);
+
+        await audit.WriteAsync(new AuditEntry("Delegation.Rejected", nameof(Delegation), d.Id.ToString(),
+            NewValues: new { d.RejectReason }), ct);
+    }
+
+    private async Task EnsureCanDecideAsync(Delegation d, CancellationToken ct)
+    {
+        if (d.Status != DelegationStatus.PendingApproval)
+            throw new DelegationConflictException(Messages.Get("AlreadyProcessed", d.Status));
+
+        if (d.CreatedById == currentUser.UserId &&
+            await settings.GetBoolAsync(SettingKeys.PreventSelfApproval, true, ct))
+            throw new DelegationConflictException(Messages.Get("SelfApproval"));
+    }
+
+    public async Task<DelegationStats> StatsAsync(CancellationToken ct)
+    {
+        var now = Now;
+        var byStatus = await SummaryAsync(ct);
+        var expiringSoon = await db.Delegations.CountAsync(d =>
+            d.Status == DelegationStatus.Active && d.EndUtc <= now.AddDays(7), ct);
+        var expired30 = await db.Delegations.CountAsync(d =>
+            d.Status == DelegationStatus.Expired && d.EndUtc >= now.AddDays(-30), ct);
+        return new DelegationStats(byStatus, expiringSoon, expired30);
     }
 
     /// <summary>Oprire de către administrator; dacă forwardul e activ, se elimină din Exchange.</summary>
@@ -249,6 +323,8 @@ public sealed class DelegationService(
         d.StopReason = reason.Length > 1000 ? reason[..1000] : reason;
 
         var removed = await forwarding.RemoveAsync(d, DelegationStatus.Stopped, currentUser.UserId, d.StopReason, ct);
+        await notifications.EnqueueAsync(d, removed ? NotificationEvent.Stopped : NotificationEvent.Failed,
+            removed ? d.StopReason : d.LastError, ct);
         await SaveAsync(ct);
 
         await audit.WriteAsync(new AuditEntry("Delegation.Stopped", nameof(Delegation), d.Id.ToString(),
@@ -408,19 +484,24 @@ public sealed class DelegationService(
             d.Id, d.Status,
             new UserRef(d.FromUser.Id, d.FromUser.SamAccountName, d.FromUser.DisplayName, d.FromUser.Email),
             new UserRef(d.ToUser.Id, d.ToUser.SamAccountName, d.ToUser.DisplayName, d.ToUser.Email),
-            d.StartUtc, d.EndUtc, d.RequiresApproval,
+            d.StartUtc, d.EndUtc, d.RequiresApproval, d.KeepCopyInSource,
             new UserRef(d.CreatedBy.Id, d.CreatedBy.SamAccountName, d.CreatedBy.DisplayName, d.CreatedBy.Email),
             d.CreatedUtc,
             d.Attachments.Count);
 
     private DelegationDetail ToDetail(Delegation d)
     {
-        var isAdmin = currentUser.IsInRole(Application.Common.AppRoles.Admin);
+        var isAdmin = currentUser.IsInRole(AppRoles.Admin);
+        var isApprover = currentUser.IsInRole(AppRoles.Approver);
+        var canDecide = isApprover && d.Status == DelegationStatus.PendingApproval;
         var actions = new AllowedActions(
             CanEdit: isAdmin && d.Status is DelegationStatus.PendingApproval or DelegationStatus.Scheduled,
             CanEditEndOnly: isAdmin && d.Status == DelegationStatus.Active,
             CanStop: isAdmin && DelegationStateMachine.CanTransition(d.Status, DelegationStatus.Stopped),
-            CanManageAttachments: isAdmin);
+            CanManageAttachments: isAdmin,
+            CanApprove: canDecide,
+            CanReject: canDecide,
+            IsOwnRequest: d.CreatedById == currentUser.UserId);
 
         return new DelegationDetail(
             d.Id, d.Status, Ref(d.FromUser), Ref(d.ToUser), d.StartUtc, d.EndUtc,

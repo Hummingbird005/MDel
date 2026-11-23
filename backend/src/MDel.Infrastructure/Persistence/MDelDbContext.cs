@@ -160,6 +160,10 @@ public class MDelDbContext(DbContextOptions<MDelDbContext> options) : DbContext(
             e.Property(x => x.RecipientType).HasConversion<string>().HasMaxLength(32).IsRequired();
             e.Property(x => x.Event).HasConversion<string>().HasMaxLength(32).IsRequired();
             e.Property(x => x.Error).HasMaxLength(2000);
+            e.Property(x => x.Language).HasMaxLength(5).IsRequired().HasDefaultValue("ro");
+            e.Property(x => x.Subject).HasMaxLength(500).IsRequired();
+            e.Property(x => x.HtmlBody).HasColumnType("nvarchar(max)").IsRequired();
+            e.Property(x => x.Attempts).HasDefaultValue(0);
             e.Property(x => x.CreatedUtc).HasDefaultValueSql("SYSUTCDATETIME()");
 
             e.HasOne(x => x.Delegation).WithMany(d => d.Notifications)
@@ -168,7 +172,8 @@ public class MDelDbContext(DbContextOptions<MDelDbContext> options) : DbContext(
                 .HasForeignKey(x => x.RecipientUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
 
             e.HasIndex(x => new { x.DelegationId, x.Event });
-            e.HasIndex(x => x.SentUtc);
+            // Coada outbox: mesajele netrimise.
+            e.HasIndex(x => new { x.SentUtc, x.Attempts });
         });
     }
 

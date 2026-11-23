@@ -42,4 +42,7 @@ public static class SettingKeys
     // General
     public const string DefaultLanguage = "General.DefaultLanguage";
     public const string PreventSelfApproval = "General.PreventSelfApproval";
+
+    /// <summary>Adresa publică a aplicației (ex. https://mdel.contoso.local) – pentru link-urile din emailuri.</summary>
+    public const string AppBaseUrl = "General.BaseUrl";
 }

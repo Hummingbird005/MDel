@@ -64,8 +64,12 @@ public sealed class FakeMailService(ILogger<FakeMailService> logger) : IMailServ
 {
     public ConcurrentQueue<MailMessage> Sent { get; } = new();
 
+    /// <summary>Pentru teste: adrese pentru care trimiterea eșuează.</summary>
+    public ConcurrentDictionary<string, bool> FailFor { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     public Task SendAsync(MailMessage message, CancellationToken ct)
     {
+        if (message.To.Any(FailFor.ContainsKey)) throw new InvalidOperationException("SMTP 550 mailbox unavailable (fake).");
         logger.LogInformation("[FAKE] Mail to {To}: {Subject}", string.Join(", ", message.To), message.Subject);
         Sent.Enqueue(message);
         return Task.CompletedTask;
