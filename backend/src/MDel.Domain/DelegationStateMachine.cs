@@ -11,14 +11,16 @@ namespace MDel.Domain;
 ///         ├─respingere─► Rejected                        │
 ///         └─oprire──► Stopped ◄────── oprire ────────────┘
 ///   Scheduled ──editare (necesită aprobare)──► PendingApproval
-///   Scheduled/Active ──eroare Exchange──► Failed ──reîncercare──► Scheduled
+///   Scheduled/Active ──eroare Exchange──► Failed ──reîncercare──► Active / Expired / Stopped
+///   PendingApproval ──sfârșit atins fără aprobare──► Expired
 /// </summary>
 public static class DelegationStateMachine
 {
     private static readonly Dictionary<DelegationStatus, DelegationStatus[]> Allowed = new()
     {
         [DelegationStatus.PendingApproval] =
-            [DelegationStatus.Scheduled, DelegationStatus.Active, DelegationStatus.Rejected, DelegationStatus.Stopped],
+            [DelegationStatus.Scheduled, DelegationStatus.Active, DelegationStatus.Rejected, DelegationStatus.Stopped,
+             DelegationStatus.Expired], // neaprobată până la data de sfârșit
         [DelegationStatus.Scheduled] =
             [DelegationStatus.Active, DelegationStatus.PendingApproval, DelegationStatus.Stopped, DelegationStatus.Failed,
              DelegationStatus.Expired],

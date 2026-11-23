@@ -56,6 +56,7 @@ public sealed class ForwardingManager(
         {
             logger.LogError(ex, "Activating delegation {Id} ({Source} -> {Target}) failed", d.Id, source, target);
             d.LastError = Truncate(ex.Message);
+            d.UpdatedUtc = now; // folosit de scheduler pentru pauza dintre reîncercări
             if (DelegationStateMachine.CanTransition(d.Status, DelegationStatus.Failed))
             {
                 d.TransitionTo(DelegationStatus.Failed, userId, now, Truncate(ex.Message, 1000));
@@ -112,6 +113,7 @@ public sealed class ForwardingManager(
         {
             logger.LogError(ex, "Removing forwarding for delegation {Id} failed", d.Id);
             d.LastError = Truncate(ex.Message);
+            d.UpdatedUtc = now;
             if (d.Status != DelegationStatus.Failed && DelegationStateMachine.CanTransition(d.Status, DelegationStatus.Failed))
             {
                 d.TransitionTo(DelegationStatus.Failed, userId, now, Truncate(ex.Message, 1000));

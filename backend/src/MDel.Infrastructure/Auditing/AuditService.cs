@@ -11,14 +11,14 @@ namespace MDel.Infrastructure.Auditing;
 /// Scrie auditul printr-un DbContext separat, ca o eroare de salvare din cererea curentă
 /// (entități rămase în change tracker) să nu împiedice sau să polueze înregistrarea de audit.
 /// </summary>
-public sealed class AuditService(IServiceScopeFactory scopeFactory, ICurrentUser currentUser, ILogger<AuditService> logger)
+public sealed class AuditService(IServiceScopeFactory scopeFactory, ICurrentUser currentUser, TimeProvider time, ILogger<AuditService> logger)
     : IAuditService
 {
     public async Task WriteAsync(AuditEntry entry, CancellationToken ct = default)
     {
         var log = new AuditLog
         {
-            TimestampUtc = DateTime.UtcNow,
+            TimestampUtc = time.GetUtcNow().UtcDateTime,
             UserId = currentUser.UserId,
             UserName = Truncate(currentUser.UserName, 256)!,
             Action = entry.Action,

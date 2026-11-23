@@ -93,8 +93,9 @@ Versiune: v3 (include clarificările din 2026-11-23 și deciziile finale)
 
 **Strategie de testare (fără acces la Exchange din dezvoltare):** integrările sunt în spatele interfețelor (`IExchangeService`, `IDirectoryService`, `IMailService`) cu implementări mock/in-memory pentru dezvoltare și teste automate. Validarea pe Exchange real o face utilizatorul, cu un script de smoke-test furnizat de noi (set/get/remove forward pe o căsuță de test).
 
-**Stare:** etapele 0–2 sunt în `main`; etapa 3 (aprobare, notificări, grup de informare) și noul design
-(Tailwind, light/dark) sunt pe branch. Coloana „mod forward” (Forward + copie / Doar forward) înlocuiește
+**Stare:** etapele 0–3 și noul design (Tailwind, light/dark) sunt în `main`; etapa 4 (scheduler) e pe branch.
+Scheduler-ul folosește un `BackgroundService` propriu în locul Hangfire: starea e deja în baza de date, iar precizia de
+30 s e suficientă – o dependență în minus. Coloana „mod forward” (Forward + copie / Doar forward) înlocuiește
 „nivel permisiuni” din prototip – aplicația rămâne doar pentru forward.
 
 ## 9. Riscuri

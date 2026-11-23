@@ -45,8 +45,12 @@ public sealed class FakeExchangeService(ILogger<FakeExchangeService> logger) : I
     /// <summary>Pentru teste: simulează un forward preexistent.</summary>
     public void Seed(string mailbox, MailboxForwarding forwarding) => _state[mailbox] = forwarding;
 
+    /// <summary>Pentru teste: Set-Mailbox eșuează cât timp e true.</summary>
+    public bool FailSet { get; set; }
+
     public Task SetForwardingAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward, CancellationToken ct)
     {
+        if (FailSet) throw new InvalidOperationException("WinRM: the Exchange server is not reachable (fake).");
         logger.LogInformation("[FAKE] Set-Mailbox {Mailbox} -ForwardingAddress {Target} -DeliverToMailboxAndForward {Keep}",
             mailboxIdentity, forwardingAddress ?? "$null", deliverToMailboxAndForward);
         _state[mailboxIdentity] = new MailboxForwarding(forwardingAddress, deliverToMailboxAndForward);

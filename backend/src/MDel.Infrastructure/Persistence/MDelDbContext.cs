@@ -288,8 +288,37 @@ public class MDelDbContext(DbContextOptions<MDelDbContext> options) : DbContext(
     /// Jurnalul de audit nu se modifică și nu se șterge prin aplicație.
     /// Singura excepție este jobul de retenție, care folosește ExecuteDelete (în afara change tracker-ului).
     /// </summary>
+    private bool _allowAuditPurge;
+
+    /// <summary>
+    /// Singura ștergere permisă din jurnalul de audit: retenția. Pe SQL Server rulează un DELETE direct;
+    /// pe furnizori fără ExecuteDelete (testele in-memory) trece prin change tracker cu o excepție explicită.
+    /// </summary>
+    public async Task<int> PurgeAuditLogsAsync(DateTime cutoffUtc, CancellationToken ct)
+    {
+        if (Database.IsRelational())
+        {
+            return await AuditLogs.Where(a => a.TimestampUtc < cutoffUtc).ExecuteDeleteAsync(ct);
+        }
+
+        var old = await AuditLogs.Where(a => a.TimestampUtc < cutoffUtc).ToListAsync(ct);
+        AuditLogs.RemoveRange(old);
+        _allowAuditPurge = true;
+        try
+        {
+            await base.SaveChangesAsync(true, ct);
+        }
+        finally
+        {
+            _allowAuditPurge = false;
+        }
+
+        return old.Count;
+    }
+
     private void GuardAuditLog()
     {
+        if (_allowAuditPurge) return;
         if (ChangeTracker.Entries<AuditLog>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("AuditLogs is append-only: entries cannot be modified or deleted.");

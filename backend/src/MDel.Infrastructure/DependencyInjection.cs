@@ -3,6 +3,7 @@ using MDel.Infrastructure.Auditing;
 using MDel.Infrastructure.Delegations;
 using MDel.Infrastructure.Integrations;
 using MDel.Infrastructure.Notifications;
+using MDel.Infrastructure.Scheduling;
 using MDel.Infrastructure.Persistence;
 using MDel.Infrastructure.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,9 @@ public static class DependencyInjection
         services.AddSingleton<NotificationSignal>();
         services.AddSingleton<NotificationDispatcher>();
         services.AddHostedService(sp => sp.GetRequiredService<NotificationDispatcher>());
+        services.AddScoped<DelegationScheduler>();
+        services.AddScoped<RetentionService>();
+        services.AddHostedService<SchedulerHostedService>();
 
         if (configuration.GetValue("Integrations:UseFakes", false))
         {
