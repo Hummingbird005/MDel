@@ -97,7 +97,10 @@ test('auditul arată acțiunile și detaliul cu valori vechi/noi', async ({ brow
 
   const page = await (await browser.newContext({ extraHTTPHeaders: ADMIN })).newPage()
   await page.goto('/audit')
+  // Așteptăm lista filtrată, altfel primul rând poate fi încă din lista nefiltrată (cursă sub încărcare).
+  const filtered = page.waitForResponse((r) => r.url().includes('/api/audit?') && r.url().includes('action=Settings'))
   await page.locator('#audit-action').selectOption('Settings.')
+  await filtered
   await page.locator('tbody tr').first().click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('cell', { name: 'Retention.AuditDays', exact: true })).toBeVisible()
