@@ -2,7 +2,7 @@
   "app": {
     "title": "MDel – Forward căsuțe email",
     "shortTitle": "MDel",
-    "subtitle": "Exchange 2016 · forward",
+    "subtitle": "Exchange Mail forward",
     "footer": "Forward temporar de email, cu aprobare și expirare automată."
   },
   "nav": {
@@ -432,7 +432,38 @@
       "InformGroup_MemberRemoved": "Membru scos din grupul de informare",
       "Notification_Retried": "Email retrimis",
       "Retention_Purged": "Ștergere prin retenție",
-      "Audit_Exported": "Export audit"
+      "Audit_Exported": "Export audit",
+      "Delegation_CreateFailed": "Creare delegare refuzată",
+      "Delegation_UpdateFailed": "Modificare delegare refuzată",
+      "Delegation_ApproveFailed": "Aprobare refuzată",
+      "Delegation_RejectFailed": "Respingere refuzată",
+      "Delegation_StopFailed": "Oprire refuzată"
+    },
+    "showHttp": "Arată și apelurile tehnice reușite (HTTP)",
+    "whatHappened": "Ce s-a întâmplat",
+    "reason": "Motiv",
+    "attempted": "Valori introduse",
+    "noChanges": "Nicio valoare modificată.",
+    "summaryMore": "+{{count}} câmpuri",
+    "showUnchanged": "Arată și cele {{count}} câmpuri nemodificate",
+    "hideUnchanged": "Ascunde câmpurile nemodificate",
+    "fields": {
+      "From": "De la (sursă)",
+      "To": "Către (destinatar)",
+      "StartUtc": "Data început",
+      "EndUtc": "Data sfârșit",
+      "RequiresApproval": "Necesită aprobare",
+      "KeepCopyInSource": "Copie în căsuța sursă",
+      "Status": "Stare",
+      "Notes": "Observații",
+      "ApprovedBy": "Aprobat de",
+      "ApprovedUtc": "Data aprobării",
+      "RejectReason": "Motivul respingerii",
+      "StopReason": "Motivul opririi",
+      "LastError": "Ultima eroare",
+      "PreferredLanguage": "Limba preferată",
+      "roles": "Roluri",
+      "initialAdminRoles": "Roluri din adminul inițial"
     }
   },
   "upcoming": {

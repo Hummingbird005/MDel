@@ -179,6 +179,19 @@ public sealed class DelegationService(
 
     public async Task<int> CreateAsync(SaveDelegationRequest request, CancellationToken ct)
     {
+        try
+        {
+            return await CreateCoreAsync(request, ct);
+        }
+        catch (Exception ex) when (IsRejection(ex))
+        {
+            await AuditRejectedAsync("Delegation.CreateFailed", null, Attempt(request), ex, ct);
+            throw;
+        }
+    }
+
+    private async Task<int> CreateCoreAsync(SaveDelegationRequest request, CancellationToken ct)
+    {
         var (fromAd, toAd) = await ValidateAsync(request, existingId: null, isCreate: true, ct);
 
         var from = await users.EnsureUserAsync(fromAd.SamAccountName, isLogin: false, ct);
@@ -228,6 +241,19 @@ public sealed class DelegationService(
     }
 
     public async Task UpdateAsync(int id, SaveDelegationRequest request, CancellationToken ct)
+    {
+        try
+        {
+            await UpdateCoreAsync(id, request, ct);
+        }
+        catch (Exception ex) when (IsRejection(ex))
+        {
+            await AuditRejectedAsync("Delegation.UpdateFailed", id, Attempt(request), ex, ct);
+            throw;
+        }
+    }
+
+    private async Task UpdateCoreAsync(int id, SaveDelegationRequest request, CancellationToken ct)
     {
         var d = await LoadForUpdateAsync(id, request.RowVersion, ct);
         var before = Snapshot(d);
@@ -303,19 +329,34 @@ public sealed class DelegationService(
     /// <summary>Un singur aprobator din grup este suficient; al doilea primește conflict.</summary>
     public async Task ApproveAsync(int id, string? rowVersion, CancellationToken ct)
     {
+        try
+        {
+            await ApproveCoreAsync(id, rowVersion, ct);
+        }
+        catch (Exception ex) when (IsRejection(ex))
+        {
+            await AuditRejectedAsync("Delegation.ApproveFailed", id, null, ex, ct);
+            throw;
+        }
+    }
+
+    private async Task ApproveCoreAsync(int id, string? rowVersion, CancellationToken ct)
+    {
         var d = await LoadForUpdateAsync(id, rowVersion, ct);
         await EnsureCanDecideAsync(d, ct);
 
         var now = Now;
         if (d.EndUtc <= now) throw new DelegationConflictException(Messages.Get("ApprovalTooLate"));
 
+        var statusBefore = d.Status;
         d.ApprovedById = RequireUserId();
         d.ApprovedUtc = now;
         d.TransitionTo(DelegationStatus.Scheduled, d.ApprovedById, now, Messages.Get("Approved"));
         await SaveAsync(ct); // aici al doilea aprobator simultan primește DbUpdateConcurrencyException -> 409
 
         await audit.WriteAsync(new AuditEntry("Delegation.Approved", nameof(Delegation), d.Id.ToString(),
-            NewValues: Snapshot(d)), ct);
+            OldValues: new { Status = statusBefore.ToString(), ApprovedBy = (string?)null },
+            NewValues: new { Status = d.Status.ToString(), ApprovedBy = currentUser.UserName, ApprovedUtc = d.ApprovedUtc }), ct);
         await notifications.EnqueueAsync(d, NotificationEvent.Approved, null, ct);
 
         if (d.StartUtc <= now && !await forwarding.ApplyAsync(d, currentUser.UserId, ct))
@@ -328,11 +369,25 @@ public sealed class DelegationService(
 
     public async Task RejectAsync(int id, string reason, string? rowVersion, CancellationToken ct)
     {
+        try
+        {
+            await RejectCoreAsync(id, reason, rowVersion, ct);
+        }
+        catch (Exception ex) when (IsRejection(ex))
+        {
+            await AuditRejectedAsync("Delegation.RejectFailed", id, new { RejectReason = reason }, ex, ct);
+            throw;
+        }
+    }
+
+    private async Task RejectCoreAsync(int id, string reason, string? rowVersion, CancellationToken ct)
+    {
         if (string.IsNullOrWhiteSpace(reason)) throw Invalid(nameof(reason), Messages.Get("ReasonRequired"));
 
         var d = await LoadForUpdateAsync(id, rowVersion, ct);
         await EnsureCanDecideAsync(d, ct);
 
+        var rejectedFrom = d.Status;
         reason = reason.Trim();
         d.RejectReason = reason.Length > 1000 ? reason[..1000] : reason;
         d.TransitionTo(DelegationStatus.Rejected, RequireUserId(), Now, d.RejectReason);
@@ -340,7 +395,8 @@ public sealed class DelegationService(
         await SaveAsync(ct);
 
         await audit.WriteAsync(new AuditEntry("Delegation.Rejected", nameof(Delegation), d.Id.ToString(),
-            NewValues: new { d.RejectReason }), ct);
+            OldValues: new { Status = rejectedFrom.ToString(), RejectReason = (string?)null },
+            NewValues: new { Status = d.Status.ToString(), d.RejectReason }), ct);
     }
 
     private async Task EnsureCanDecideAsync(Delegation d, CancellationToken ct)
@@ -367,6 +423,19 @@ public sealed class DelegationService(
     /// <summary>Oprire de către administrator; dacă forwardul e activ, se elimină din Exchange.</summary>
     public async Task<bool> StopAsync(int id, StopDelegationRequest request, CancellationToken ct)
     {
+        try
+        {
+            return await StopCoreAsync(id, request, ct);
+        }
+        catch (Exception ex) when (IsRejection(ex))
+        {
+            await AuditRejectedAsync("Delegation.StopFailed", id, new { StopReason = request.Reason }, ex, ct);
+            throw;
+        }
+    }
+
+    private async Task<bool> StopCoreAsync(int id, StopDelegationRequest request, CancellationToken ct)
+    {
         if (string.IsNullOrWhiteSpace(request.Reason)) throw Invalid(nameof(request.Reason), Messages.Get("ReasonRequired"));
 
         var d = await LoadForUpdateAsync(id, request.RowVersion, ct);
@@ -375,6 +444,7 @@ public sealed class DelegationService(
             throw new DelegationConflictException(Messages.Get("NotStoppable", d.Status));
         }
 
+        var stoppedFrom = d.Status;
         var reason = request.Reason.Trim();
         d.StoppedById = RequireUserId();
         d.StoppedUtc = Now;
@@ -386,7 +456,8 @@ public sealed class DelegationService(
         await SaveAsync(ct);
 
         await audit.WriteAsync(new AuditEntry("Delegation.Stopped", nameof(Delegation), d.Id.ToString(),
-            NewValues: new { d.StopReason, Status = d.Status.ToString(), d.LastError },
+            OldValues: new { Status = stoppedFrom.ToString(), StopReason = (string?)null },
+            NewValues: new { Status = d.Status.ToString(), d.StopReason, d.LastError },
             Result: removed ? AuditResult.Success : AuditResult.Failure), ct);
         return removed;
     }
@@ -522,6 +593,35 @@ public sealed class DelegationService(
     private static DateTime MaxDate(DateTime a, DateTime b) => a > b ? a : b;
 
     private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>Valorile introduse de utilizator într-o cerere de creare / modificare (pentru auditul încercărilor respinse).</summary>
+    private static object Attempt(SaveDelegationRequest r) => new
+    {
+        From = UserProvisioningService.NormalizeSam(r.FromSam ?? ""),
+        To = UserProvisioningService.NormalizeSam(r.ToSam ?? ""),
+        StartUtc = r.StartUtc,
+        EndUtc = r.EndUtc,
+        r.RequiresApproval,
+        r.Notes,
+    };
+
+    private static bool IsRejection(Exception ex) =>
+        ex is DelegationValidationException or DelegationConflictException or Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException;
+
+    /// <summary>
+    /// O acțiune refuzată (validare, stare nepermisă, conflict) rămâne în audit, cu valorile încercate și motivul refuzului.
+    /// </summary>
+    private Task AuditRejectedAsync(string action, int? id, object? attempted, Exception ex, CancellationToken ct)
+    {
+        var reason = ex switch
+        {
+            DelegationValidationException v => string.Join("; ", v.Errors.Select(e => $"{e.Key}: {string.Join(" ", e.Value)}")),
+            Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => Messages.Get("Concurrency"),
+            _ => ex.Message,
+        };
+        return audit.WriteAsync(new AuditEntry(action, nameof(Delegation), id?.ToString(),
+            NewValues: attempted, Details: reason, Result: AuditResult.Failure), ct);
+    }
 
     private static object Snapshot(Delegation d) => new
     {

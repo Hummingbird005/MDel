@@ -72,7 +72,9 @@ Rulați după instalare (vezi [DEPLOY.md](DEPLOY.md)), cu **căsuțe de test**. 
 | 6.1 | Dashboard | cardurile KPI corecte; „Următoarele 7 zile” arată activările/expirările | |
 | 6.2 | Delegări: filtre stare/mod, sortare, interval, căutare | lista se filtrează corect | |
 | 6.3 | Export CSV | se deschide corect în Excel (diacritice, coloane) | |
-| 6.4 | S: Istoric / Audit: filtrați după delegarea din pasul 3 | apar toate acțiunile ei (creare, aprobare, activare, expirare, emailuri) | |
+| 6.4 | S: Istoric / Audit: filtrați după delegarea din pasul 3 | apar acțiunile ei (creare, aprobare, activare, expirare, emailuri); în coloana „Ce s-a întâmplat” se văd direct valorile introduse la creare (de la, către, interval, observații), la modificare „vechi → nou”, la aprobare / oprire starea și motivul; fără apeluri HTTP tehnice | |
+| 6.4a | S: încercați o delegare care se suprapune cu alta, apoi aprobați de două ori aceeași cerere | rămân în audit „Creare delegare refuzată” (cu valorile introduse și motivul) și „Aprobare refuzată” | |
+| 6.4b | S: căutați în audit un text introdus în observații | găsește înregistrarea; „Arată și apelurile tehnice reușite” adaugă și cererile HTTP | |
 | 6.5 | S: Audit: detaliul unei modificări de setări | valori vechi/noi; conturile și parolele (AD, Exchange, SMTP) apar ca `***` | |
 | 6.6 | S: Setări → Notificări email | emailurile trimise; dacă există eșuate – Retrimite funcționează | |
 

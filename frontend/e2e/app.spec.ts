@@ -103,8 +103,61 @@ test('auditul arată acțiunile și detaliul cu valori vechi/noi', async ({ brow
   await filtered
   await page.locator('tbody tr').first().click()
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('cell', { name: 'Retention.AuditDays', exact: true })).toBeVisible()
+  // Eticheta lizibilă a câmpului (codul rămâne dedesubt) și valoarea nouă.
+  await expect(dialog.getByRole('cell', { name: /Retenție audit/ })).toContainText('Retention.AuditDays')
   await expect(dialog.getByRole('cell', { name: '400', exact: true })).toBeVisible()
+})
+
+test('auditul arată în listă valorile introduse și, la modificare, vechi → nou', async ({ browser, request }) => {
+  // Interval aleatoriu: o reluare a testului nu se suprapune cu încercarea anterioară pe aceeași căsuță sursă.
+  const offsetDays = 3 + Math.floor(Math.random() * 300)
+  const start = new Date(Date.now() + offsetDays * 86_400_000).toISOString()
+  const end = new Date(Date.now() + (offsetDays + 1) * 86_400_000).toISOString()
+  const created = await request.post('http://localhost:5080/api/delegations', {
+    headers: ADMIN,
+    data: { fromSam: 'maria.ionescu', toSam: 'ion.popescu', startUtc: start, endUtc: end, requiresApproval: true, notes: 'Concediu odihnă ZX-4471' },
+  })
+  expect(created.status()).toBe(201)
+  const { id, rowVersion } = await created.json()
+  const updated = await request.put(`http://localhost:5080/api/delegations/${id}`, {
+    headers: ADMIN,
+    data: { fromSam: 'maria.ionescu', toSam: 'ion.popescu', startUtc: start, endUtc: end, requiresApproval: true, notes: 'Concediu prelungit', rowVersion },
+  })
+  expect(updated.status()).toBe(200)
+
+  const page = await (await browser.newContext({ extraHTTPHeaders: ADMIN })).newPage()
+  await page.goto(`/audit?entityType=Delegation&entityId=${id}`)
+
+  // Creare: câmpurile introduse, direct în listă (fără apeluri HTTP tehnice).
+  const createdRow = page.locator('tbody tr', { hasText: 'Delegare creată' })
+  await expect(createdRow).toContainText('De la (sursă): maria.ionescu')
+  await expect(createdRow).toContainText('Către (destinatar): ion.popescu')
+  await expect(createdRow).toContainText('Observații: Concediu odihnă ZX-4471')
+
+  // Modificare: doar ce s-a schimbat, vechi → nou.
+  const updatedRow = page.locator('tbody tr', { hasText: 'Delegare modificată' })
+  await expect(updatedRow).toContainText('Observații: Concediu odihnă ZX-4471 → Concediu prelungit')
+  await expect(page.locator('tbody tr', { hasText: 'Cerere HTTP' })).toHaveCount(0)
+
+  // Apelurile tehnice reușite apar doar la cerere.
+  // Starea se schimbă după navigarea din URL (filtrele stau în URL), deci se așteaptă, nu se verifică imediat.
+  await page.getByLabel('Arată și apelurile tehnice reușite (HTTP)').click()
+  await expect(page).toHaveURL(/includeHttp=true/)
+  await expect(page.getByLabel('Arată și apelurile tehnice reușite (HTTP)')).toBeChecked()
+
+  // Fără filtrul pe delegare (apelurile HTTP nu au țintă), apelurile tehnice apar doar cu comutatorul activ.
+  await page.goto('/audit')
+  await expect(page.locator('tbody tr', { hasText: 'Delegare creată' }).first()).toBeVisible()
+  // (apelurile refuzate sau eșuate rămân vizibile mereu; aici contează doar cele reușite)
+  const httpOk = page.locator('tbody tr').filter({ hasText: 'Cerere HTTP' }).filter({ hasText: 'Reușit' })
+  await expect(httpOk).toHaveCount(0)
+  await page.goto('/audit?includeHttp=true')
+  await expect(httpOk.first()).toBeVisible()
+
+  // Căutarea găsește și după valoarea introdusă.
+  await page.goto('/audit')
+  await page.getByLabel('Text').fill('ZX-4471')
+  await expect(page.locator('tbody tr', { hasText: 'Delegare creată' })).toBeVisible()
 })
 
 test('pe telefon pagina nu are scroll orizontal', async ({ browser }) => {

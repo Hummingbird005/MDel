@@ -2,7 +2,7 @@
   "app": {
     "title": "MDel – Mailbox Forwarding",
     "shortTitle": "MDel",
-    "subtitle": "Exchange 2016 · forwarding",
+    "subtitle": "Exchange Mail forward",
     "footer": "Temporary email forwarding with approval and automatic expiry."
   },
   "nav": {
@@ -427,7 +427,38 @@
       "InformGroup_MemberRemoved": "Inform group member removed",
       "Notification_Retried": "Email resent",
       "Retention_Purged": "Retention purge",
-      "Audit_Exported": "Audit exported"
+      "Audit_Exported": "Audit exported",
+      "Delegation_CreateFailed": "Delegation creation refused",
+      "Delegation_UpdateFailed": "Delegation change refused",
+      "Delegation_ApproveFailed": "Approval refused",
+      "Delegation_RejectFailed": "Rejection refused",
+      "Delegation_StopFailed": "Stop refused"
+    },
+    "showHttp": "Also show successful technical calls (HTTP)",
+    "whatHappened": "What happened",
+    "reason": "Reason",
+    "attempted": "Values entered",
+    "noChanges": "No value was changed.",
+    "summaryMore": "+{{count}} fields",
+    "showUnchanged": "Also show the {{count}} unchanged fields",
+    "hideUnchanged": "Hide unchanged fields",
+    "fields": {
+      "From": "From (source)",
+      "To": "To (target)",
+      "StartUtc": "Start",
+      "EndUtc": "End",
+      "RequiresApproval": "Requires approval",
+      "KeepCopyInSource": "Keep a copy in the source mailbox",
+      "Status": "Status",
+      "Notes": "Notes",
+      "ApprovedBy": "Approved by",
+      "ApprovedUtc": "Approved at",
+      "RejectReason": "Rejection reason",
+      "StopReason": "Stop reason",
+      "LastError": "Last error",
+      "PreferredLanguage": "Preferred language",
+      "roles": "Roles",
+      "initialAdminRoles": "Roles from the initial admin"
     }
   },
   "upcoming": {

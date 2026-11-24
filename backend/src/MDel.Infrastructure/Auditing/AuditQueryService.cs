@@ -16,7 +16,8 @@ public sealed record AuditQuery(
     AuditResult? Result = null,
     string? Search = null,
     int Page = 1,
-    int PageSize = 50);
+    int PageSize = 50,
+    bool IncludeHttp = false);
 
 public sealed record AuditListItem(
     long Id,
@@ -32,7 +33,9 @@ public sealed record AuditListItem(
     int? StatusCode,
     string? IpAddress,
     AuditResult Result,
-    bool HasChanges);
+    bool HasChanges,
+    string? OldValues,
+    string? NewValues);
 
 public sealed record AuditDetail(
     long Id,
@@ -67,7 +70,7 @@ public sealed class AuditQueryService(MDelDbContext db)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(a => new AuditListItem(a.Id, a.TimestampUtc, a.UserName, a.User != null ? a.User.DisplayName : null,
                 a.Action, a.EntityType, a.EntityId, a.Details, a.HttpMethod, a.Path, a.StatusCode, a.IpAddress, a.Result,
-                a.OldValues != null || a.NewValues != null))
+                a.OldValues != null || a.NewValues != null, a.OldValues, a.NewValues))
             .ToListAsync(ct);
         return new AuditPage(items, total, page, pageSize);
     }
@@ -134,6 +137,11 @@ public sealed class AuditQueryService(MDelDbContext db)
             q = action.EndsWith('.') ? q.Where(a => a.Action.StartsWith(action)) : q.Where(a => a.Action == action);
         }
 
+        // Apelurile HTTP reușite dublează acțiunea de business (care are valorile): se ascund implicit.
+        // Cele refuzate (401/403) sau eșuate rămân vizibile; toate se văd cu IncludeHttp sau când se filtrează „Http.”.
+        var httpRequested = query.IncludeHttp || (query.Action?.Trim().StartsWith("Http", StringComparison.Ordinal) ?? false);
+        if (!httpRequested) q = q.Where(a => !(a.Action == "Http.Request" && a.Result == AuditResult.Success));
+
         if (!string.IsNullOrWhiteSpace(query.EntityType)) q = q.Where(a => a.EntityType == query.EntityType);
         if (!string.IsNullOrWhiteSpace(query.EntityId)) q = q.Where(a => a.EntityId == query.EntityId);
         if (query.Result is { } result) q = q.Where(a => a.Result == result);
@@ -141,8 +149,10 @@ public sealed class AuditQueryService(MDelDbContext db)
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var s = query.Search.Trim();
+            // Se caută și în valorile înregistrate (ex. un nume de utilizator sau o dată introdusă într-un câmp).
             q = q.Where(a => (a.Details != null && a.Details.Contains(s)) || (a.Path != null && a.Path.Contains(s)) ||
-                             (a.IpAddress != null && a.IpAddress.Contains(s)) || (a.EntityId != null && a.EntityId == s));
+                             (a.IpAddress != null && a.IpAddress.Contains(s)) || (a.EntityId != null && a.EntityId == s) ||
+                             (a.NewValues != null && a.NewValues.Contains(s)) || (a.OldValues != null && a.OldValues.Contains(s)));
         }
 
         return q;

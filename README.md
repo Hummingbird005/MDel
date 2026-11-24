@@ -176,10 +176,19 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 
 ## Audit și coada de emailuri (etapa 6)
 
-- **Istoric / Audit** (doar administratori): toate acțiunile – login, cereri HTTP de modificare, acces refuzat,
-  delegări, aprobări, operații Exchange (inclusiv cele automate, cu utilizatorul „Sistem”), fișiere, setări,
-  exporturi, retenție. Filtre după interval, utilizator, acțiune (sau grup de acțiuni), rezultat și text;
-  detaliul arată valorile vechi și noi câmp cu câmp (parolele apar mascate). Export CSV (auditat).
+- **Istoric / Audit** (rolul Administrator sistem): toate acțiunile – login, delegări, aprobări, operații Exchange
+  (inclusiv cele automate, cu utilizatorul „Sistem”), fișiere, setări, exporturi, retenție, acces refuzat.
+  - **Ce s-a întâmplat, direct în listă:** la creare, valorile introduse (de la, către, început, sfârșit, aprobare,
+    observații); la modificare, doar ce s-a schimbat, **vechi → nou**; la aprobare / respingere / oprire, starea
+    veche → nouă, cine și motivul. Valorile sunt citibile: date în ora locală, da/nu, stări traduse, câmpuri cu nume
+    din interfață.
+  - **Încercările respinse rămân în audit**, cu valorile introduse și motivul (suprapunere, validare, delegare deja
+    aprobată, conflict): „Creare delegare refuzată”, „Aprobare refuzată” etc.
+  - **Apelurile tehnice HTTP reușite sunt ascunse** (dublau fiecare acțiune); cele refuzate sau eșuate rămân vizibile.
+    Se pot afișa cu „Arată și apelurile tehnice reușite”.
+  - Filtre după interval, utilizator, acțiune (sau grup de acțiuni), rezultat și text; textul caută și în valorile
+    înregistrate. Detaliul arată câmp cu câmp vechi / nou (cele nemodificate, la cerere). Conturile și parolele apar
+    mascate (`***`). Export CSV (auditat), cu valorile vechi și noi.
 - Din pagina unei delegări, „Istoric audit” deschide auditul filtrat pe acea delegare.
 - **Setări → Notificări email**: mesajele eșuate, în coadă și trimise, cu eroarea și numărul de încercări;
   „Retrimite” repune un mesaj în coadă (pentru grupuri recitește adresa din setări). Numărul de emailuri
@@ -206,7 +215,7 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 ## Teste
 
 ```bash
-cd backend && dotnet test MDel.slnx          # 168 de teste: model EF, API, reguli, notificări, scheduler, audit
+cd backend && dotnet test MDel.slnx          # 175 de teste: model EF, API, reguli, notificări, scheduler, audit
 cd frontend && npm run lint && npm run build
 cd frontend && npm run e2e                   # Playwright: pornește backend-ul (in-memory) și Vite
 ```
