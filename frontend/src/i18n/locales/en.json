@@ -161,7 +161,22 @@
     "attempts_one": "{{count}} attempt",
     "attempts_other": "{{count}} attempts",
     "retry": "Resend",
-    "mailRetried": "The message was queued again"
+    "mailRetried": "The message was queued again",
+    "adFile": {
+      "info": "The Active Directory connection is configured in appsettings.json (ActiveDirectory section, Enabled = true) and takes precedence over this screen. To change it, edit the file and restart the application.",
+      "server": "Server",
+      "ssl": "SSL (LDAPS)",
+      "sslNoValidation": "Yes, without certificate validation",
+      "authType": "Authentication",
+      "bindUser": "Bind account",
+      "appPool": "application pool identity",
+      "password": "Password",
+      "searchBases": "Search bases",
+      "wholeDomain": "whole domain",
+      "domain": "Domain",
+      "passwordSet": "•••••• (set in the file)",
+      "passwordNotSet": "not set"
+    }
   },
   "status": {
     "PendingApproval": "Pending",

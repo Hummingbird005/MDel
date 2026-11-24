@@ -163,7 +163,22 @@
     "attempts_few": "{{count}} încercări",
     "attempts_other": "{{count}} de încercări",
     "retry": "Retrimite",
-    "mailRetried": "Mesajul a fost repus în coadă"
+    "mailRetried": "Mesajul a fost repus în coadă",
+    "adFile": {
+      "info": "Conexiunea la Active Directory este configurată în appsettings.json (secțiunea ActiveDirectory, Enabled = true) și are prioritate față de acest ecran. Pentru modificări editați fișierul și reporniți aplicația.",
+      "server": "Server",
+      "ssl": "SSL (LDAPS)",
+      "sslNoValidation": "Da, fără verificarea certificatului",
+      "authType": "Autentificare",
+      "bindUser": "Cont de citire",
+      "appPool": "identitatea app pool-ului",
+      "password": "Parolă",
+      "searchBases": "OU-uri de căutare",
+      "wholeDomain": "tot domeniul",
+      "domain": "Domeniu",
+      "passwordSet": "•••••• (setată în fișier)",
+      "passwordNotSet": "nesetată"
+    }
   },
   "status": {
     "PendingApproval": "În așteptare",

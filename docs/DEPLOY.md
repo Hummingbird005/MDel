@@ -89,6 +89,8 @@ La fiecare versiune nouă, în acest caz: rulați din nou `efbundle.exe` înaint
 }
 ```
 
+- `ActiveDirectory` – conexiunea la AD direct din fișier (server, port 636 + SSL, cont de citire, OU-uri de căutare);
+  cu `Enabled: true` are prioritate față de ecranul Setări. Detalii: [AD-SETUP.md](AD-SETUP.md).
 - `Setup:InitialAdmins` – **adminul**: administrator indiferent de grupurile AD (conectare cu contul Windows).
 - `Setup:InitialSettings` – setări (AD inclusiv contul și parola de citire, grupuri, adresa aplicației…) copiate în
   Setări la pornire: doar dacă sunt goale sau, cu `Setup:OverwriteSettingsOnStartup = true`, la fiecare pornire.

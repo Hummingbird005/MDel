@@ -183,6 +183,8 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 - Producție: Windows Authentication (Negotiate/Kerberos) pe IIS – vezi `web.config`.
 - Rolurile `Admin` și `Approver` se obțin din grupurile AD configurate în `AppSettings`
   (`Groups.Admins`, `Groups.Approvers`).
+- **AD din `appsettings.json`:** secțiunea `ActiveDirectory` (`Enabled`, `Server`, `Port`, `UseSsl`, `BindUser`,
+  `BindPassword`, `SearchBases`…) configurează conexiunea LDAP/LDAPS și are prioritate față de ecranul Setări.
 - **Fără PowerShell:** conturile din `Setup:InitialAdmins` (`appsettings.json`) sunt administratori indiferent de
   grupuri (se conectează cu Windows). `Setup:InitialSettings` configurează AD-ul (domeniu, server, cont și parolă de
   citire – salvată criptat), grupurile și adresa aplicației; cu `Setup:OverwriteSettingsOnStartup = true` fișierul se
@@ -191,7 +193,7 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 ## Teste
 
 ```bash
-cd backend && dotnet test MDel.slnx          # 129 de teste: model EF, API, reguli, notificări, scheduler, audit
+cd backend && dotnet test MDel.slnx          # 149 de teste: model EF, API, reguli, notificări, scheduler, audit
 cd frontend && npm run lint && npm run build
 cd frontend && npm run e2e                   # Playwright: pornește backend-ul (in-memory) și Vite
 ```

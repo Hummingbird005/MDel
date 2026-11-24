@@ -48,6 +48,8 @@ public static class DependencyInjection
         services.AddScoped<RetentionService>();
         services.AddHostedService<SchedulerHostedService>();
 
+        services.Configure<ActiveDirectoryOptions>(configuration.GetSection(ActiveDirectoryOptions.SectionName));
+
         if (configuration.GetValue("Integrations:UseFakes", false))
         {
             services.AddSingleton<IDirectoryService, FakeDirectoryService>();
