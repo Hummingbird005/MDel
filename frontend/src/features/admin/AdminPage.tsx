@@ -45,6 +45,18 @@ const kinds: Record<string, FieldKind> = {
   'General.DefaultLanguage': 'language',
 }
 
+/** Ordinea câmpurilor în formulare (altfel ar fi alfabetică: parola înaintea contului, comutatoarele la capăt). */
+const fieldOrder = [
+  'Ad.Domain', 'Ad.LdapServer', 'Ad.Port', 'Ad.UseSsl', 'Ad.ValidateCertificate', 'Ad.SearchBases', 'Ad.ServiceUser', 'Ad.ServicePassword',
+  'Groups.Admins', 'Groups.Approvers', 'Groups.SystemAdmins', 'Groups.AdminsEmail', 'Groups.ApproversEmail',
+  'Exchange.PowerShellUri', 'Exchange.ServiceUser', 'Exchange.ServicePassword', 'Exchange.KeepCopyInSource',
+  'Smtp.Host', 'Smtp.Port', 'Smtp.UseTls', 'Smtp.User', 'Smtp.Password', 'Smtp.FromAddress',
+]
+const orderOf = (key: string) => {
+  const i = fieldOrder.indexOf(key)
+  return i === -1 ? fieldOrder.length : i
+}
+
 const labelKey = (key: string) => `admin.fields.${key.replace(/\./g, '_')}`
 const helpKey = (key: string) => `admin.help.${key.replace(/\./g, '_')}`
 
@@ -87,7 +99,7 @@ export function AdminPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
           <div className="xl:col-span-3">
-            <SettingsForm key={tab} settings={query.data.settings.filter((s) => s.category === tab)} maxAttachmentMb={query.data.maxAttachmentMb} />
+            <SettingsForm key={tab} settings={query.data.settings.filter((s) => s.category === tab).sort((a, b) => orderOf(a.key) - orderOf(b.key))} maxAttachmentMb={query.data.maxAttachmentMb} />
           </div>
           {current.test && (
             <div className="xl:col-span-2">

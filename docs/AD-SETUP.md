@@ -1,139 +1,57 @@
 # MDel – pregătirea Active Directory înainte de prima pornire
 
-Pașii de mai jos se fac **o singură dată**, înainte de instalarea din [DEPLOY.md](DEPLOY.md). La final aveți:
-contul de serviciu, grupurile de administratori și aprobatori, SPN-urile pentru Kerberos, drepturile în SQL Server
-și secțiunea `Setup` din `appsettings.json` completată, inclusiv **adminul inițial** cu care vă conectați prima dată.
+Pașii de mai jos se fac **o singură dată**, înainte de instalarea din [DEPLOY.md](DEPLOY.md). La final aveți contul de
+serviciu, cele trei grupuri AD (câte unul pe rol), SPN-urile pentru Kerberos și drepturile în SQL Server.
+**Configurarea AD în aplicație se face strict din interfață** (Setări → Active Directory), nu din fișiere:
+în `appsettings.json` nu se pune niciun cont sau parolă.
 
-Exemplele folosesc domeniul `contoso.local` (NetBIOS `CONTOSO`) și adresa aplicației `https://mdel.contoso.local`.
+Exemplele folosesc domeniul `corp.local` (NetBIOS `CORP`) și adresa aplicației `https://mdel.corp.local`.
 
-## Varianta rapidă: totul din `appsettings.json` (fără PowerShell)
+## Rolurile și grupurile
 
-Dacă nu puteți rula scripturi PowerShell în AD, conexiunea la AD și administratorul se configurează direct în
-`appsettings.json` din folderul aplicației (ex. `C:\inetpub\MDel\appsettings.json`), înainte de prima pornire.
+Un utilizator poate avea oricâte roluri, câte unul din fiecare grup AD în care e membru.
 
-### 1. Conexiunea la AD: secțiunea `ActiveDirectory`
+| Rol | Grup AD (exemplu) | Ce poate face |
+|---|---|---|
+| **Administrator delegări** (`Admin`) | `CORP\MDel-Admins` | creează, modifică și oprește delegări; vede dashboard-ul și toate delegările |
+| **Aprobator** (`Approver`) | `CORP\MDel-Approvers` | aprobă / respinge cererile |
+| **Administrator sistem** (`SystemAdmin`) | `CORP\MDel-System` | meniurile **Setări** și **Istoric / Audit** (AD, Exchange, SMTP, grupuri, șabloane, coada de emailuri, audit) |
 
-```json
-"ActiveDirectory": {
-  "Enabled": true,
-  "Server": "dc01.corp.local",
-  "Port": 636,
-  "UseSsl": true,
-  "ValidateCertificate": true,
-  "BindUser": "CN=svc-mdel,OU=Servicii,DC=corp,DC=local",
-  "BindPassword": "parola-contului",
-  "AuthType": null,
-  "SearchBases": [
-    "OU=Angajati,DC=corp,DC=local",
-    "OU=Externi,DC=corp,DC=local"
-  ],
-  "Domain": "corp.local",
-  "TimeoutSeconds": 15
-}
-```
-
-| Cheie | Ce face |
-|---|---|
-| `Enabled` | `true` = conexiunea se ia **din acest fișier** și are prioritate față de ecranul Setări (tab-ul Active Directory devine doar informativ). `false` = se folosește ecranul Setări. |
-| `Server` | controlerul de domeniu (`dc01.corp.local`) sau numele domeniului (DC găsit prin DNS). Acceptă și `ldaps://dc01.corp.local`. |
-| `Port` | `636` pentru LDAPS, `389` fără SSL. Gol = ales după `UseSsl`. |
-| `UseSsl` | LDAPS. Certificatul DC-ului trebuie să fie de încredere pe serverul aplicației, iar numele din `Server` să fie cel din certificat. |
-| `ValidateCertificate` | `false` doar pentru teste (certificat self-signed): acceptă orice certificat. |
-| `BindUser` | contul cu care se citește din AD, în una din formele `CN=svc-mdel,OU=…,DC=corp,DC=local` (DN), `svc-mdel@corp.local` sau `CORP\\svc-mdel`. Orice cont de domeniu obișnuit, fără drepturi speciale. `null` = identitatea app pool-ului. |
-| `BindPassword` | parola contului (în fișier, text clar: restricționați accesul la folder). |
-| `AuthType` | `null` = automat: DN → `Basic` (simple bind, **doar cu SSL**), celelalte → `Negotiate` (Kerberos/NTLM). Se poate forța `Basic` sau `Negotiate`. |
-| `SearchBases` | OU-urile în care se caută utilizatorii (oricâte). Gol `[]` = tot domeniul. Conturile dezactivate nu apar. |
-| `Domain` | domeniul DNS, pentru un `BindUser` fără domeniu. Opțional. |
-
-Verificare: **Setări → Active Directory → Testează conexiunea** arată sursa (appsettings.json), serverul, portul, tipul de
-autentificare și fiecare OU (OK / inexistent). La eroare spune cauza: parolă greșită, cont blocat/dezactivat/expirat,
-server sau port inaccesibil, certificat neacceptat, SSL necesar.
-
-### 2. Administratorul și grupurile: secțiunea `Setup`
-
-```json
-"Setup": {
-  "MigrateDatabaseOnStartup": true,
-  "InitialAdmins": [ "CORP\\ion.popescu" ],
-  "OverwriteSettingsOnStartup": true,
-  "InitialSettings": {
-    "Groups.Admins": "CORP\\MDel-Admins",
-    "Groups.AdminsEmail": "mdel-admins@corp.local",
-    "Groups.Approvers": "CORP\\MDel-Approvers",
-    "Groups.ApproversEmail": "mdel-approvers@corp.local",
-    "General.BaseUrl": "https://mdel.corp.local"
-  }
-}
-```
-
-În JSON, backslash-ul se scrie dublat (`CORP\\ion.popescu`).
-
-- **`InitialAdmins`**: utilizatorul (sau utilizatorii) care e **Admin** în aplicație, indiferent de grupuri. Intră cu
-  contul Windows și parola lui din AD. Poate rămâne în fișier cât timp e nevoie.
-- **`OverwriteSettingsOnStartup: true`**: valorile din `InitialSettings` se aplică la **fiecare pornire**, deci o
-  greșeală se corectează tot din fișier (modificați, reporniți app pool-ul). Cu `false` (implicit), fișierul completează
-  doar câmpurile goale, iar de acolo înainte setările se schimbă din ecranul Setări.
-- **Grupurile** pot fi orice grupuri de securitate existente în AD (create de echipa AD, de ex. din
-  *Active Directory Users and Computers*). Pot rămâne goale la început: aplicația funcționează cu adminul din
-  `InitialAdmins`; fără grup de aprobatori folosiți delegările **Fără aprobare**.
-
-După ce ați salvat fișierul: porniți app pool-ul. Baza se creează singură (pasul 5 pentru drepturile SQL), apoi
-deschideți aplicația cu contul din `InitialAdmins` și rulați **Setări → Active Directory → Testează conexiunea**.
-
-**Fără SPN-uri** (pasul 3), autentificarea Windows funcționează prin NTLM; Kerberos e de preferat, dar nu e obligatoriu.
-
-Restul paginii detaliază fiecare pas, inclusiv varianta automată cu scriptul PowerShell.
+Grupurile se completează în aplicație, la **Setări → Grupuri** (sau, doar pentru prima pornire, în `appsettings.json`,
+vezi mai jos). Un administrator de delegări **nu** vede Setări și Audit decât dacă e și în grupul de administratori de
+sistem. Grupul de informare (cei care primesc doar notificări) nu e grup AD: se completează din Setări → Grup de informare.
 
 ## Pe scurt
 
 | # | Ce | Cine / unde |
 |---|---|---|
-| 1 | Cont de serviciu `CONTOSO\svc-mdel` | AD (script) |
-| 2 | Grupurile `MDel-Admins` și `MDel-Approvers`, cu membri și adrese de email | AD + Exchange (script) |
-| 3 | Înregistrare DNS și SPN-uri `HTTP/mdel.contoso.local` | DNS + AD (script) |
+| 1 | Cont de serviciu `CORP\svc-mdel` | AD |
+| 2 | Grupurile `MDel-Admins`, `MDel-Approvers`, `MDel-System`, cu membri | AD (+ Exchange pentru adrese de email) |
+| 3 | Înregistrare DNS și SPN-uri `HTTP/mdel.corp.local` | DNS + AD |
 | 4 | Site-ul în zona *Local intranet* a browserelor | GPO |
 | 5 | Drepturi SQL Server pentru contul de serviciu | SQL Server |
 | 6 | Rol RBAC Exchange pentru contul de serviciu | Exchange (`scripts/New-MDelRbacRole.ps1`) |
-| 7 | `appsettings.json`: admin inițial + setări AD | serverul aplicației |
+| 7 | `appsettings.json`: connection string și **adminul inițial** | serverul aplicației |
+| 8 | Prima pornire → **Setări → Active Directory** (server, SSL, OU-uri, cont) → **Grupuri** | aplicația |
 
-Pașii 1–3 se pot face automat cu `scripts/New-MDelAdObjects.ps1` (vezi mai jos) sau manual.
+## 1–3. Contul de serviciu, grupurile, SPN-urile
 
-## 1–3. Contul de serviciu, grupurile, SPN-urile – automat
-
-Pe o stație din domeniu cu RSAT (modulul ActiveDirectory), cu un cont care poate crea obiecte în OU-ul ales.
-Rulat din **Exchange Management Shell**, cu `-MailEnableGroups`, grupurile primesc și adrese de email.
+**Cu PowerShell** (opțional) – `scripts/New-MDelAdObjects.ps1` creează tot ce lipsește, idempotent:
 
 ```powershell
-# 1) Ce s-ar face, fără modificări:
-.\scripts\New-MDelAdObjects.ps1 -OrganizationalUnit 'OU=MDel,OU=Servicii,DC=contoso,DC=local' `
-    -AppHostName mdel.contoso.local -AdminMembers ion.popescu,maria.ionescu -ApproverMembers dan.georgescu `
-    -MailEnableGroups -WhatIf
-
-# 2) Aplicare (cere parola contului de serviciu, dacă îl creează):
-.\scripts\New-MDelAdObjects.ps1 -OrganizationalUnit 'OU=MDel,OU=Servicii,DC=contoso,DC=local' `
-    -AppHostName mdel.contoso.local -AdminMembers ion.popescu,maria.ionescu -ApproverMembers dan.georgescu `
-    -MailEnableGroups
+.\scripts\New-MDelAdObjects.ps1 -OrganizationalUnit 'OU=MDel,OU=Servicii,DC=corp,DC=local' `
+    -AppHostName mdel.corp.local -AdminMembers ion.popescu -ApproverMembers dan.georgescu `
+    -SystemAdminMembers ion.popescu -MailEnableGroups -WhatIf     # fără -WhatIf aplică modificările
 ```
 
-Scriptul poate fi rulat de mai multe ori: completează doar ce lipsește. La final afișează secțiunea `Setup` gata
-completată pentru `appsettings.json` (pasul 7).
+**Fără PowerShell** – cereți echipei AD sau folosiți *Active Directory Users and Computers*:
 
-## 1–3. Manual
-
-**1. Cont de serviciu** – utilizator obișnuit, de ex. `svc-mdel`: parola nu expiră, fără drepturi de administrator.
-Va fi identitatea app pool-ului IIS și accesează cu acest cont SQL Server, AD (citire LDAP) și Exchange.
-Citirea din AD nu cere drepturi speciale: orice utilizator autentificat poate căuta conturi.
-
-**2. Grupuri** – grupuri de **securitate**, cu scope **Universal** (necesar pentru adresă de email în Exchange):
-
-| Grup | Rol în aplicație | Membri |
-|---|---|---|
-| `CONTOSO\MDel-Admins` | administrator: delegări, oprire, Setări, Audit | administratorii de sistem |
-| `CONTOSO\MDel-Approvers` | aprobator: aprobă / respinge cererile | aprobatorii (alții decât cei care creează cererile) |
-
-Grupul de informare (cei care primesc doar notificări) **nu** e grup AD: se completează din aplicație, Setări → Grup de informare.
-
-Adrese de email (notificările către administratori / aprobatori se trimit pe adresa grupului):
+1. **Cont de serviciu** – utilizator obișnuit, de ex. `svc-mdel`: parola nu expiră, fără drepturi de administrator.
+   Va fi identitatea app pool-ului IIS (accesează SQL Server și Exchange). Pentru citirea din AD se poate folosi același
+   cont sau altul; **orice cont de domeniu obișnuit poate căuta utilizatori**, nu cere drepturi speciale.
+2. **Trei grupuri** de securitate, scope **Universal** (necesar pentru adresă de email în Exchange):
+   `MDel-Admins`, `MDel-Approvers`, `MDel-System`. Adăugați membrii.
+3. Adrese de email pentru grupurile de administratori și aprobatori (notificările se trimit pe ele):
 
 ```powershell
 # Exchange Management Shell
@@ -144,14 +62,14 @@ Get-DistributionGroup MDel-* | Format-Table Name, PrimarySmtpAddress
 
 **3. DNS și SPN-uri (Kerberos)**
 
-- Înregistrare DNS de tip **A** (nu CNAME) `mdel.contoso.local` → IP-ul serverului IIS.
+- Înregistrare DNS de tip **A** (nu CNAME) `mdel.corp.local` → IP-ul serverului IIS.
 - Dacă app pool-ul rulează cu contul de serviciu și site-ul se deschide cu acest nume, SPN-urile HTTP trebuie să
   fie pe contul de serviciu (altfel browserul cade pe NTLM sau autentificarea eșuează):
 
 ```cmd
-setspn -S HTTP/mdel.contoso.local CONTOSO\svc-mdel
-setspn -S HTTP/mdel CONTOSO\svc-mdel
-setspn -L CONTOSO\svc-mdel
+setspn -S HTTP/mdel.corp.local CORP\svc-mdel
+setspn -S HTTP/mdel CORP\svc-mdel
+setspn -L CORP\svc-mdel
 ```
 
 `-S` refuză duplicatele. Un SPN `HTTP/...` pus pe două conturi strică Kerberos.
@@ -164,14 +82,14 @@ setspn -L CONTOSO\svc-mdel
 ```
 
 Dacă app pool-ul rulează ca *ApplicationPoolIdentity* (cont de calculator), nu adăugați SPN-uri: cele implicite
-`HOST/<server>` acoperă numele serverului; pentru un nume DNS propriu, SPN-ul `HTTP/mdel.contoso.local` se pune pe
+`HOST/<server>` acoperă numele serverului; pentru un nume DNS propriu, SPN-ul `HTTP/mdel.corp.local` se pune pe
 contul de calculator al serverului IIS.
 
 ## 4. Browserele: zona Local intranet
 
 Ca utilizatorii să intre fără să li se ceară parola, adresa aplicației trebuie să fie în zona *Local intranet*.
 GPO → User Configuration → Administrative Templates → Windows Components → Internet Explorer → Internet Control Panel
-→ Security Page → **Site to Zone Assignment List**: `https://mdel.contoso.local` = `1`.
+→ Security Page → **Site to Zone Assignment List**: `https://mdel.corp.local` = `1`.
 Edge și Chrome folosesc aceleași zone.
 
 ## 5. SQL Server
@@ -181,19 +99,19 @@ versiune nouă (`Setup:MigrateDatabaseOnStartup = true`). Contul de serviciu are
 
 ```sql
 -- A) Aplicația creează baza (cel mai simplu):
-CREATE LOGIN [CONTOSO\svc-mdel] FROM WINDOWS;
-ALTER SERVER ROLE dbcreator ADD MEMBER [CONTOSO\svc-mdel];   -- creatorul bazei devine owner (db_owner)
+CREATE LOGIN [CORP\svc-mdel] FROM WINDOWS;
+ALTER SERVER ROLE dbcreator ADD MEMBER [CORP\svc-mdel];   -- creatorul bazei devine owner (db_owner)
 
 -- B) DBA-ul creează baza goală, aplicația creează tabelele:
 CREATE DATABASE MDel;
-CREATE LOGIN [CONTOSO\svc-mdel] FROM WINDOWS;
+CREATE LOGIN [CORP\svc-mdel] FROM WINDOWS;
 USE MDel;
-CREATE USER [CONTOSO\svc-mdel] FOR LOGIN [CONTOSO\svc-mdel];
-ALTER ROLE db_owner ADD MEMBER [CONTOSO\svc-mdel];
+CREATE USER [CORP\svc-mdel] FOR LOGIN [CORP\svc-mdel];
+ALTER ROLE db_owner ADD MEMBER [CORP\svc-mdel];
 ```
 
 După prima pornire, la varianta A, rolul `dbcreator` poate fi retras
-(`ALTER SERVER ROLE dbcreator DROP MEMBER [CONTOSO\svc-mdel];`), pentru că baza există și contul rămâne owner.
+(`ALTER SERVER ROLE dbcreator DROP MEMBER [CORP\svc-mdel];`), pentru că baza există și contul rămâne owner.
 Dacă DBA-ul preferă să aplice el modificările de structură, setați `MigrateDatabaseOnStartup` = `false` și folosiți
 `efbundle.exe` / `mdel-migrations.sql` din pachet (vezi [DEPLOY.md](DEPLOY.md), secțiunea 3).
 
@@ -201,61 +119,96 @@ Dacă DBA-ul preferă să aplice el modificările de structură, setați `Migrat
 
 ```powershell
 # Exchange Management Shell, cont din Organization Management
-.\scripts\New-MDelRbacRole.ps1 -ServiceAccount CONTOSO\svc-mdel
+.\scripts\New-MDelRbacRole.ps1 -ServiceAccount CORP\svc-mdel
 ```
 
 Detalii și testare: [scripts/README.md](../scripts/README.md).
 
-## 7. `appsettings.json`: adminul inițial și setările AD
+## 7. `appsettings.json`: connection string și adminul inițial
 
-În folderul aplicației (ex. `C:\inetpub\MDel\appsettings.json`), secțiunea `Setup`:
+În folderul aplicației (ex. `C:\inetpub\MDel\appsettings.json`). **Active Directory nu se configurează aici**, iar
+conturile și parolele nu se pun niciodată în fișier.
 
 ```json
-"Setup": {
-  "MigrateDatabaseOnStartup": true,
-  "InitialAdmins": [ "CONTOSO\\ion.popescu" ],
-  "InitialSettings": {
-    "Ad.Domain": "contoso.local",
-    "Ad.LdapServer": "",
-    "Ad.BaseDn": "DC=contoso,DC=local",
-    "Groups.Admins": "CONTOSO\\MDel-Admins",
-    "Groups.AdminsEmail": "mdel-admins@contoso.local",
-    "Groups.Approvers": "CONTOSO\\MDel-Approvers",
-    "Groups.ApproversEmail": "mdel-approvers@contoso.local",
-    "General.BaseUrl": "https://mdel.contoso.local"
+{
+  "ConnectionStrings": { "MDel": "Server=SQL01;Database=MDel;Trusted_Connection=True;TrustServerCertificate=True" },
+  "Setup": {
+    "MigrateDatabaseOnStartup": true,
+    "InitialAdmins": [ "CORP\\ion.popescu" ]
   }
 }
 ```
 
-În JSON, backslash-ul se scrie dublat: `CONTOSO\\ion.popescu`.
+În JSON, backslash-ul se scrie dublat (`CORP\\ion.popescu`).
 
-| Cheie | Ce face |
+### Adminul inițial (`Setup:InitialAdmins`)
+
+Conturile din listă primesc **toate cele trei roluri**, fiecare **până când se completează grupul acelui rol**:
+
+| Situație | Rezultat pentru adminul inițial |
 |---|---|
-| `InitialAdmins` | **Adminul**: conturile din listă sunt administratori chiar dacă nu sunt în grupul `MDel-Admins`. Format `CONTOSO\\cont` sau doar `cont`. Conectarea se face tot cu Windows, cu parola contului din AD. Aplicația nu are parole proprii. |
-| `InitialSettings` | Valori copiate în **Setări** la pornire: implicit doar pentru câmpurile încă goale (ce salvați ulterior din ecranul Setări nu se suprascrie); cu `OverwriteSettingsOnStartup = true`, la fiecare pornire. |
-| `Ad.LdapServer` | gol = controlerul de domeniu se găsește prin DNS din `Ad.Domain`; altfel `dc01.contoso.local` sau `ldaps://dc01.contoso.local:636` |
-| `Ad.BaseDn` | gol = derivat din domeniu (`DC=contoso,DC=local`); se poate restrânge la un OU |
-| `Groups.*` | grupurile și adresele de la pasul 2 |
-| `General.BaseUrl` | adresa aplicației, pentru linkurile din emailuri |
+| Niciun grup completat (prima pornire) | are `Admin`, `Approver` și `SystemAdmin` – poate configura totul |
+| Ați completat **Grup administratori de sistem** | pierde `SystemAdmin` (rolul vine doar din grup), le păstrează pe celelalte |
+| Ați completat toate cele trei grupuri | nu mai are niciun rol din `InitialAdmins`; rolurile vin doar din grupuri |
 
-| `Ad.ServiceUser` / `Ad.ServicePassword` | cont pentru citirea din AD; gol = identitatea app pool-ului. Parola se salvează criptată. |
-| `OverwriteSettingsOnStartup` | `true` = valorile din fișier se aplică la fiecare pornire (configurare doar din fișier) |
+Grupul „completat” = valoarea din Setări → Grupuri sau, dacă aceea e goală, `Authentication:Groups:Admins` /
+`Approvers` / `SystemAdmins` din `appsettings.json`. **Înainte să completați Grup administratori de sistem, asigurați-vă
+că sunteți membru al lui** (altfel vă pierdeți accesul la Setări). Rolurile se reîmprospătează în max. 5 minute.
 
-Se pot pune și alte setări (cheile din Setări, ex. `Exchange.PowerShellUri`, `Exchange.ServiceUser`,
-`Exchange.ServicePassword`, `Smtp.Host`, `Smtp.FromAddress`, `Attachments.StoragePath`). Parolele se salvează criptate
-în bază; după prima pornire reușită le puteți șterge din fișier.
+Conectarea se face cu contul Windows (parola din AD); aplicația nu are parole proprii.
 
-## Prima pornire și verificare
+### Setări non-secrete la prima pornire (opțional)
 
-1. Porniți site-ul (app pool-ul). Cu `stdoutLogEnabled="true"` în `web.config` (temporar), în `logs\stdout_*.log`
-   apar: `Applying 4 database migration(s)…`, `Database migrations applied.`, `Initial settings applied: Ad.Domain, …`.
-   Erorile de pornire apar oricum în Event Viewer → Windows Logs → Application.
-2. `https://mdel.contoso.local/api/health/ready` → `"status":"ready"`.
-3. Deschideți aplicația cu contul din `InitialAdmins`. Vedeți meniurile Dashboard, Delegări, Istoric/Audit și Setări.
-4. **Setări → Active Directory → Testează conexiunea**, apoi celelalte taburi (Exchange, SMTP, Fișiere), ca în
-   [DEPLOY.md](DEPLOY.md), secțiunea 7.
-5. Opțional, când grupul `MDel-Admins` e configurat: verificați că un membru al lui intră ca administrator, apoi
-   goliți `InitialAdmins` (`[]`) și reporniți app pool-ul. De acum rolurile vin doar din grupuri.
+`Setup:InitialSettings` copiază în Setări valori **nesecrete** (grupuri, adresa aplicației, domeniul AD…), doar dacă sunt
+goale, sau la fiecare pornire cu `Setup:OverwriteSettingsOnStartup = true`:
+
+```json
+"Setup": {
+  "InitialSettings": {
+    "Groups.SystemAdmins": "CORP\\MDel-System",
+    "Groups.Admins": "CORP\\MDel-Admins",
+    "Groups.Approvers": "CORP\\MDel-Approvers",
+    "General.BaseUrl": "https://mdel.corp.local"
+  }
+}
+```
+
+Conturile și parolele (`Ad.ServiceUser`, `Ad.ServicePassword`, `Exchange.*`, `Smtp.*`) sunt **ignorate** aici (cu avertisment
+în log): se introduc doar din interfață.
+
+## 8. Prima pornire: configurarea AD din interfață
+
+1. Porniți app pool-ul: baza se creează singură. Deschideți `https://mdel.corp.local/api/health/ready` →
+   `"status":"ready"`.
+2. Deschideți aplicația cu contul din `InitialAdmins` → **Setări** → **Active Directory**:
+
+| Câmp | Ce se completează |
+|---|---|
+| Domeniu AD | `corp.local` |
+| Server LDAP / controler de domeniu | `dc01.corp.local` (sau `ldaps://dc01.corp.local:636`); gol = controlerul se găsește după domeniu |
+| Port | gol = 636 cu SSL, 389 fără |
+| Folosește SSL (LDAPS) | **da**, recomandat (port 636); obligatoriu dacă contul e dat ca DN |
+| Verifică certificatul serverului | da; dezactivați doar pentru teste cu certificat self-signed |
+| OU-uri de căutare | câte un OU pe linie, ex. `OU=Angajati,DC=corp,DC=local`; gol = tot domeniul. Conturile dezactivate nu apar |
+| Cont de citire din AD | `CORP\svc-mdel`, `svc-mdel@corp.local` sau DN (`CN=svc-mdel,OU=Servicii,DC=corp,DC=local`); gol = identitatea app pool-ului |
+| Parola contului | parola contului de mai sus |
+
+3. **Salvați**, apoi **Testează conexiunea**: arată serverul, portul, contul și fiecare OU („OK” / inexistent). La eroare,
+   mesajul spune cauza: cont sau parolă greșite, cont blocat / dezactivat / expirat, server sau port inaccesibil,
+   certificat neacceptat, SSL necesar.
+4. **Setări → Grupuri**: completați grupurile celor trei roluri (și adresele de email ale administratorilor / aprobatorilor).
+   Completați **ultimul** grupul de administratori de sistem, după ce v-ați adăugat în el (vezi tabelul de la pasul 7).
+5. Verificați că un membru din fiecare grup are rolul așteptat (în colțul de sus al aplicației apar rolurile), apoi
+   goliți `InitialAdmins` din `appsettings.json` și reporniți app pool-ul.
+
+### Cum se păstrează conturile și parolele
+
+- Contul și parola de citire din AD, contul și parola Exchange, contul și parola SMTP se salvează **criptate în baza de
+  date** (ASP.NET Core Data Protection); nu apar în cod, în `appsettings.json`, în API (interfața arată doar „setat”) sau în audit.
+- Cheile de criptare sunt în `DataProtection:KeysPath` (vezi [DEPLOY.md](DEPLOY.md)): includeți folderul în backup.
+  Dacă se pierd, conturile și parolele se reintroduc din Setări.
+- La actualizarea de la o versiune în care utilizatorul se salva necriptat, valorile existente se criptează automat la
+  prima pornire.
 
 ## Probleme frecvente
 
@@ -263,10 +216,12 @@ Se pot pune și alte setări (cheile din Setări, ex. `Exchange.PowerShellUri`, 
 |---|---|
 | Se cere parola în browser / „401” | site-ul nu e în zona Local intranet; SPN lipsă sau duplicat (`setspn -X`); `useAppPoolCredentials` neactivat |
 | App pool-ul se oprește la pornire (HTTP 500.30) | baza nu poate fi creată: connection string sau drepturi SQL (pasul 5); detaliile apar în Event Viewer |
-| `Setup:InitialSettings contains invalid values` | o valoare invalidă (ex. email greșit): corectați-o în `appsettings.json` |
-| Adminul inițial intră, dar fără nume/email | AD nu e încă accesibil sau configurat: se completează la prima conectare după ce testul AD trece |
-| Test AD: „wrong user name or password” | `BindUser` / `BindPassword` greșite (pentru DN: verificați exact CN-ul și OU-ul contului) |
-| Test AD: „cannot reach … over SSL” | port 636 blocat, certificatul DC-ului nu e de încredere pe serverul aplicației sau `Server` nu e numele din certificat |
-| Test AD: „requires SSL” / „Basic … clear text” | simple bind cu DN merge doar cu `UseSsl: true` (port 636); fără SSL folosiți `CORP\\cont` |
-| Test AD: „Search base …: NoSuchObject” | OU-ul din `SearchBases` nu există sau e scris greșit |
-| Un membru nou al grupului nu are drepturi | trebuie să se deconecteze/reconecteze în Windows (grupurile sunt în tichetul Kerberos); în aplicație rolurile se reîmprospătează în max. 5 minute |
+| Intru în aplicație, dar nu văd Setări / Audit | nu aveți rolul **Administrator sistem**: nu sunteți în `InitialAdmins` sau grupul acelui rol e deja completat și nu sunteți în el |
+| Nu mai am acces la Setări după ce am completat grupul de sistem | contul nu e membru al grupului; adăugați-l în AD (rolul se reîmprospătează în max. 5 minute) sau, ca măsură de urgență, goliți grupul din baza de date (`UPDATE mdel.AppSettings SET Value = '' WHERE [Key] = 'Groups.SystemAdmins'`) |
+| Adminul inițial intră, dar fără nume/email | AD nu e încă configurat: se completează după ce testul AD trece |
+| Test AD: „wrong service account or password” | cont sau parolă greșite (pentru DN: verificați exact CN-ul și OU-ul) |
+| Test AD: „cannot reach … over SSL” | port 636 blocat, certificatul DC-ului nu e de încredere pe serverul aplicației sau serverul introdus nu e numele din certificat |
+| Test AD: „… clear text” / „turn on Use SSL” | un cont dat ca DN (`CN=…`) merge doar cu „Folosește SSL”; fără SSL folosiți `CORP\\cont` |
+| Test AD: „Search OU … NoSuchObject” | OU-ul din „OU-uri de căutare” nu există sau e scris greșit |
+| `Setup:InitialSettings contains invalid values` | o valoare invalidă în `appsettings.json` (ex. email greșit): corectați-o |
+| Un membru nou al unui grup nu are rolul | trebuie să se deconecteze/reconecteze în Windows (grupurile sunt în tichetul Kerberos); în aplicație rolurile se reîmprospătează în max. 5 minute |

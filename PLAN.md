@@ -153,6 +153,8 @@ restaurarea stării anterioare, iar rolul RBAC (`scripts/New-MDelRbacRole.ps1`) 
 | 9 – AD din interfață | secțiunea `ActiveDirectory` din `appsettings.json` dispare; setări noi pentru AD (port, SSL, validarea certificatului, OU-uri de căutare); contul de citire AD, contul Exchange și contul SMTP devin secrete criptate (inclusiv utilizatorul); criptarea valorilor vechi existente la pornire; `Setup:InitialSettings` refuză cheile secrete; în Development, AD real imediat ce e completat în Setări | teste unitare + AD real (Samba) cu configurare doar din Setări; upgrade pe SQL Server real, cu valori vechi necriptate |
 | 10 – Documentație | AD-SETUP, DEPLOY, LOCAL-RUN, UAT, README, scriptul PowerShell (grup nou) | citit cap-coadă; verificare sintaxă PowerShell |
 
+**Stare:** etapele 8–10 sunt implementate și verificate pe SQL Server 2022 și pe un AD real (Samba, `corp.local`, LDAPS).
+
 **Efecte de reținut**
 - Grupurile de administratori existente **nu** mai văd Setări / Audit decât dacă le dați și rolul nou
   (grupul `Groups.SystemAdmins`).
