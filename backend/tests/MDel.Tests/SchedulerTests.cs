@@ -222,4 +222,18 @@ public sealed class SchedulerTests : IDisposable
         Assert.Equal(HttpStatusCode.Conflict, (await Admin().GetAsync($"/api/delegations/{id}/attachments/{d.Attachments[0].Id}")).StatusCode);
         Assert.True(_factory.WithDb(db => db.AuditLogs.Any(a => a.Action == "Retention.Purged")));
     }
+
+    [Fact]
+    public async Task Retention_keeps_the_files_of_a_delegation_that_has_not_ended_yet()
+    {
+        await ConfigureGroups();
+        var id = await Create(Now.AddHours(1), Now.AddDays(400)); // delegare de peste un an
+        var form = new MultipartFormDataContent { { new ByteArrayContent([1, 2, 3]), "files", "aprobare.pdf" } };
+        Assert.Equal(HttpStatusCode.OK, (await Admin().PostAsync($"/api/delegations/{id}/attachments", form)).StatusCode);
+
+        _factory.Clock.Advance(TimeSpan.FromDays(366));
+        using var scope = _factory.Services.CreateScope();
+        Assert.Equal(0, (await scope.ServiceProvider.GetRequiredService<RetentionService>().RunAsync(default)).AttachmentsPurged);
+        Assert.NotEmpty(Directory.GetFiles(_storage, "*", SearchOption.AllDirectories));
+    }
 }

@@ -184,8 +184,9 @@ public sealed class AttachmentService(
         if (name.Length == 0) name = "file";
         if (name.Length > 200)
         {
+            // Extensia se păstrează doar dacă e scurtă (altfel „a.<250 de caractere>” ar da index negativ).
             var ext = Path.GetExtension(name);
-            name = name[..(200 - ext.Length)] + ext;
+            name = ext.Length is > 0 and <= 20 ? name[..(200 - ext.Length)] + ext : name[..200];
         }
 
         return name;

@@ -389,6 +389,18 @@ public sealed class DelegationApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_file_name_with_a_very_long_extension_is_refused_cleanly_not_with_a_server_error()
+    {
+        await ConfigureStorage();
+        var d = await CreateOk(Admin(), Request("ion.popescu", "maria.ionescu", Now.AddDays(1), Now.AddDays(2)));
+
+        var response = await Admin().PostAsync($"/api/delegations/{d.Id}/attachments",
+            Files(("raport." + new string('x', 250), [1, 2, 3])));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.True((await Errors(response)).TryGetProperty("files", out _));
+    }
+
+    [Fact]
     public async Task Attachments_respect_extension_and_size_limits()
     {
         await ConfigureStorage(maxMb: 1);

@@ -51,6 +51,15 @@ test.describe('Flux complet de delegare', () => {
 
     await expect(page).toHaveURL(/\/delegations\/\d+$/)
     await expect(page.getByText('Activă').first()).toBeVisible()
+
+    // Delegarea pornită „acum” are ora de început cu secunde; formularul trimite minutul – modificarea sfârșitului merge.
+    await page.getByRole('button', { name: 'Modifică data de sfârșit' }).click()
+    await page.locator('#end').fill(localInput(inDays(3, 18)))
+    await page.getByRole('button', { name: 'Salvează' }).click()
+    await expect(page.getByRole('alert').filter({ hasText: 'doar data de sfârșit' })).toHaveCount(0)
+    await expect(page.locator('#end')).toHaveCount(0) // formularul s-a închis după salvare
+    await expect(page.getByText('Activă').first()).toBeVisible()
+
     await page.getByRole('button', { name: 'Oprește', exact: true }).click()
     await page.locator('#decision-reason').fill('Revenire anticipată')
     await page.getByRole('dialog').getByRole('button', { name: 'Oprește', exact: true }).click()

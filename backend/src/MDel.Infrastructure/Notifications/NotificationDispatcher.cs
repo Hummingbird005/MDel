@@ -57,9 +57,11 @@ public sealed class NotificationDispatcher(
             var db = scope.ServiceProvider.GetRequiredService<MDelDbContext>();
             var now = time.GetUtcNow().UtcDateTime;
 
+            // Mesajele noi (fără încercări) primele, apoi cele mai vechi încercări: mesajele în pauză după erori
+            // nu blochează trimiterea celor noi.
             var candidates = await db.DelegationNotifications
                 .Where(n => n.SentUtc == null && n.Attempts < MaxAttempts)
-                .OrderBy(n => n.Id)
+                .OrderBy(n => n.LastAttemptUtc == null ? 0 : 1).ThenBy(n => n.LastAttemptUtc).ThenBy(n => n.Id)
                 .Take(BatchSize)
                 .ToListAsync(ct);
 
@@ -82,9 +84,11 @@ public sealed class NotificationDispatcher(
                     logger.LogWarning(ex, "Sending notification {Id} to {Email} failed (attempt {Attempt}/{Max})",
                         n.Id, n.RecipientEmail, n.Attempts, MaxAttempts);
                 }
+
+                // Salvat după fiecare mesaj: o oprire a aplicației în mijlocul lotului nu retrimite ce a plecat deja.
+                await db.SaveChangesAsync(CancellationToken.None);
             }
 
-            await db.SaveChangesAsync(ct);
             return sent;
         }
         finally

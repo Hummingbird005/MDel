@@ -90,7 +90,8 @@ public sealed class ForwardingManager(
 
             if (stillOurs)
             {
-                await exchange.SetForwardingAsync(source, d.PreviousForwardingAddress,
+                // Restaurare: starea de dinainte, oricare era (și un contact extern), fără regula „doar intern”.
+                await exchange.RestoreForwardingAsync(source, d.PreviousForwardingAddress,
                     d.PreviousDeliverToMailboxAndForward ?? false, ct);
                 d.LastError = null;
             }
