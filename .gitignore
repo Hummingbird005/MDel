@@ -27,3 +27,6 @@ out/
 # Logurile npm (frontend/.npmrc pune cache-ul în offline/npm-cache)
 offline/npm-cache/_logs/
 offline/npm-cache/_update-notifier-last-checked
+
+# Setări locale de dezvoltare (parole, cont propriu)
+backend/src/MDel.Api/appsettings.Local.json

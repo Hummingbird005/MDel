@@ -1,28 +1,35 @@
 # MDel – checklist UAT (mediul de test)
 
-Rulați după instalare (vezi [DEPLOY.md](DEPLOY.md)), cu **căsuțe de test**. Folosiți cel puțin trei conturi:
-**A** – administrator, **B** – aprobator (alt utilizator decât A), **C** – fără rol. Notați rezultatul (✅ / ❌)
+Rulați după instalare (vezi [DEPLOY.md](DEPLOY.md)), cu **căsuțe de test**. Folosiți cel puțin patru conturi:
+**A** – administrator delegări, **S** – administrator sistem (Setări și Audit), **B** – aprobator (alt utilizator decât A),
+**C** – fără rol. Un cont poate avea mai multe roluri (ex. A și S). Notați rezultatul (✅ / ❌)
 și, la ❌, ce ați văzut (captură, mesaj, ora) – le folosim pentru corecturi.
 
 ## 1. Acces și interfață
 
 | # | Pas | Rezultat așteptat | ✅/❌ |
 |---|---|---|---|
-| 1.1 | A deschide aplicația | intră fără parolă (Windows), vede Dashboard, Delegări, Istoric/Audit, Setări | |
+| 1.1 | A deschide aplicația | intră fără parolă (Windows), vede Dashboard și Delegări; **nu** vede Setări și Istoric / Audit (nici prin adresă: „Nu aveți drepturi”) | |
+| 1.1a | S deschide aplicația | vede Setări și Istoric / Audit; **nu** vede Dashboard și Delegări | |
+| 1.1b | Un cont cu ambele roluri (A și S) | vede toate meniurile; în colț apar ambele roluri | |
 | 1.2 | B deschide aplicația | vede Dashboard, Delegări, Aprobări; **nu** vede Setări / Audit | |
 | 1.3 | C deschide aplicația | mesaj „Nu aveți drepturi”, nicio delegare vizibilă | |
 | 1.4 | Comută tema (soare/lună) și reîncarcă | tema rămâne aleasă | |
 | 1.5 | Schimbă limba în EN, apoi RO | interfața se traduce; rămâne după reîncărcare | |
 
-## 2. Setări (A)
+## 2. Setări (S)
 
 | # | Pas | Rezultat așteptat | ✅/❌ |
 |---|---|---|---|
-| 2.1 | Testează conexiunea AD, Exchange, SMTP (cu email de test), Fișiere | toate „OK”; emailul de test ajunge | |
+| 2.0 | Setări → Active Directory: completați domeniul, serverul, „Folosește SSL”, OU-urile de căutare (unul pe linie), contul și parola de citire → Salvează → Testează conexiunea | „Connected …” și fiecare OU „OK”; la o parolă greșită, mesajul spune „wrong service account or password” | |
+| 2.0a | Reîncărcați pagina Setări → Active Directory | domeniul, serverul și OU-urile se văd; contul și parola apar doar ca „setat”, nu și valorile | |
+| 2.0b | Delegare nouă → căutați un utilizator din OU-urile configurate (și unul din afara lor) | apare doar cel din OU-uri | |
+| 2.1 | Testează conexiunea Exchange, SMTP (cu email de test), Fișiere | toate „OK”; emailul de test ajunge | |
 | 2.2 | Exchange → verifică forwardul unei căsuțe de test | afișează forwardul curent (sau „–”) | |
 | 2.3 | Grup de informare: adaugă un utilizator | apare în listă | |
 | 2.4 | Salvează o valoare invalidă (ex. retenție 0) | mesaj de eroare pe câmp, nimic salvat | |
-| 2.5 | Șabloane email: modificați „Cerere de aprobare” (subiect + text cu `{sursa}`, `{inceput}`) și salvați | previzualizarea arată textul; următoarea cerere sosește cu noul text (în română) | |
+| 2.5 | Setări → Grupuri: completați grupurile celor trei roluri (administrator sistem ultimul, după ce sunteți membru) | după max. 5 minute, rolurile vin doar din grupuri; contul din `InitialAdmins` care nu e în grup pierde rolul respectiv | |
+| 2.6 | Șabloane email: modificați „Cerere de aprobare” (subiect + text cu `{sursa}`, `{inceput}`) și salvați | previzualizarea arată textul; următoarea cerere sosește cu noul text (în română) | |
 
 ## 3. Delegare cu aprobare
 
@@ -65,9 +72,9 @@ Rulați după instalare (vezi [DEPLOY.md](DEPLOY.md)), cu **căsuțe de test**. 
 | 6.1 | Dashboard | cardurile KPI corecte; „Următoarele 7 zile” arată activările/expirările | |
 | 6.2 | Delegări: filtre stare/mod, sortare, interval, căutare | lista se filtrează corect | |
 | 6.3 | Export CSV | se deschide corect în Excel (diacritice, coloane) | |
-| 6.4 | Istoric / Audit: filtrați după delegarea din pasul 3 | apar toate acțiunile ei (creare, aprobare, activare, expirare, emailuri) | |
-| 6.5 | Audit: detaliul unei modificări de setări | valori vechi/noi; parolele mascate | |
-| 6.6 | Setări → Notificări email | emailurile trimise; dacă există eșuate – Retrimite funcționează | |
+| 6.4 | S: Istoric / Audit: filtrați după delegarea din pasul 3 | apar toate acțiunile ei (creare, aprobare, activare, expirare, emailuri) | |
+| 6.5 | S: Audit: detaliul unei modificări de setări | valori vechi/noi; conturile și parolele (AD, Exchange, SMTP) apar ca `***` | |
+| 6.6 | S: Setări → Notificări email | emailurile trimise; dacă există eșuate – Retrimite funcționează | |
 
 ## 7. Robustețe
 

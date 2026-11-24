@@ -1,8 +1,11 @@
 <#
 .SYNOPSIS
-    Pregătește Active Directory pentru MDel, înainte de prima pornire: contul de serviciu, grupurile
-    de administratori și de aprobatori (cu membrii lor), SPN-urile pentru Kerberos și, opțional,
-    adresele de email ale grupurilor.
+    Pregătește Active Directory pentru MDel, înainte de prima pornire: contul de serviciu, cele trei grupuri
+    (administratori delegări, aprobatori, administratori sistem – cu membrii lor), SPN-urile pentru Kerberos și,
+    opțional, adresele de email ale grupurilor de administratori și aprobatori.
+
+    Configurarea AD în aplicație (server, SSL, OU-uri, cont de citire) NU se face aici: se face din interfață,
+    Setări → Active Directory, după prima pornire. Vezi docs/AD-SETUP.md.
 
 .DESCRIPTION
     Idempotent: ce există deja nu se recreează (doar se completează membrii / SPN-urile lipsă).
@@ -13,12 +16,13 @@
 
 .EXAMPLE
     .\New-MDelAdObjects.ps1 -OrganizationalUnit 'OU=MDel,OU=Servicii,DC=contoso,DC=local' `
-        -AppHostName mdel.contoso.local -AdminMembers ion.popescu,maria.ionescu -ApproverMembers dan.georgescu -WhatIf
+        -AppHostName mdel.contoso.local -AdminMembers ion.popescu,maria.ionescu -ApproverMembers dan.georgescu `
+        -SystemAdminMembers ion.popescu -WhatIf
 
 .EXAMPLE
     # Din Exchange Management Shell (cu modulul ActiveDirectory importat), ca grupurile să primească adrese de email:
     .\New-MDelAdObjects.ps1 -OrganizationalUnit 'OU=MDel,DC=contoso,DC=local' -AppHostName mdel.contoso.local `
-        -AdminMembers ion.popescu -ApproverMembers dan.georgescu -MailEnableGroups
+        -AdminMembers ion.popescu -ApproverMembers dan.georgescu -SystemAdminMembers ion.popescu -MailEnableGroups
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
@@ -29,9 +33,11 @@ param(
     [string]   $ServiceAccount = 'svc-mdel',
     [string]   $AdminsGroup = 'MDel-Admins',
     [string]   $ApproversGroup = 'MDel-Approvers',
+    [string]   $SystemAdminsGroup = 'MDel-System',
     # Conturi (sAMAccountName) adăugate în grupuri.
     [string[]] $AdminMembers = @(),
     [string[]] $ApproverMembers = @(),
+    [string[]] $SystemAdminMembers = @(),
     # Grupurile devin grupuri de securitate cu adresă de email (notificările se trimit pe ele).
     [switch]   $MailEnableGroups,
     # Fără SPN-uri (ex. app pool-ul rulează ca ApplicationPoolIdentity / cont de calculator).
@@ -89,8 +95,9 @@ function Initialize-MDelGroup([string] $name, [string] $description, [string[]] 
 }
 
 # Universal: necesar pentru a putea deveni grup cu adresă de email în Exchange.
-Initialize-MDelGroup $AdminsGroup 'MDel – administratori (creează și opresc delegări, Setări, Audit)' $AdminMembers
+Initialize-MDelGroup $AdminsGroup 'MDel – administratori delegări (creează și opresc delegări)' $AdminMembers
 Initialize-MDelGroup $ApproversGroup 'MDel – aprobatori (aprobă / resping cererile de delegare)' $ApproverMembers
+Initialize-MDelGroup $SystemAdminsGroup 'MDel – administratori sistem (Setări, Istoric / Audit)' $SystemAdminMembers
 
 # ------------------------------------------------------------------ 3. SPN-uri (Kerberos)
 # Necesare când app pool-ul rulează cu contul de serviciu și site-ul se deschide cu un nume DNS propriu.
@@ -134,26 +141,25 @@ foreach ($name in @($AdminsGroup, $ApproversGroup)) {
 # ------------------------------------------------------------------ 5. Ce urmează
 $adminsEmail = if ($emails[$AdminsGroup]) { $emails[$AdminsGroup] } else { '' }
 $approversEmail = if ($emails[$ApproversGroup]) { $emails[$ApproversGroup] } else { '' }
-$firstAdmin = if ($AdminMembers.Count -gt 0) { "$netbios\\$($AdminMembers[0])" } else { "$netbios\\<contul-dvs>" }
+$firstAdmin = if ($SystemAdminMembers.Count -gt 0) { "$netbios\\$($SystemAdminMembers[0])" }
+              elseif ($AdminMembers.Count -gt 0) { "$netbios\\$($AdminMembers[0])" }
+              else { "$netbios\\<contul-dvs>" }
 
 Write-Host ''
-Write-Host 'Gata. Completați în appsettings.json (folderul aplicației), secțiunea "Setup":' -ForegroundColor Cyan
+Write-Host 'Gata. În appsettings.json (folderul aplicației) completați doar adminul inițial:' -ForegroundColor Cyan
 @"
   "Setup": {
-    "MigrateDatabaseOnStartup": true,
-    "InitialAdmins": [ "$firstAdmin" ],
-    "InitialSettings": {
-      "Ad.Domain": "$($domain.DNSRoot)",
-      "Ad.LdapServer": "",
-      "Ad.BaseDn": "$($domain.DistinguishedName)",
-      "Groups.Admins": "$netbios\\$AdminsGroup",
-      "Groups.AdminsEmail": "$adminsEmail",
-      "Groups.Approvers": "$netbios\\$ApproversGroup",
-      "Groups.ApproversEmail": "$approversEmail",
-      "General.BaseUrl": "https://$AppHostName"
-    }
+    "InitialAdmins": [ "$firstAdmin" ]
   }
 "@ | Write-Host
+
+Write-Host ''
+Write-Host 'După prima pornire, în aplicație, la Setări:' -ForegroundColor Cyan
+Write-Host "  Active Directory : domeniul $($domain.DNSRoot), serverul (ex. un controler de domeniu), SSL, OU-urile de căutare, contul și parola de citire"
+Write-Host "  Grupuri          : administratori delegări  = $netbios\$AdminsGroup   (email: $adminsEmail)"
+Write-Host "                     aprobatori               = $netbios\$ApproversGroup   (email: $approversEmail)"
+Write-Host "                     administratori sistem    = $netbios\$SystemAdminsGroup   (completați-l ultimul, după ce sunteți membru)"
+Write-Host '  Contul și parola se salvează criptat în baza de date, nu în fișier.'
 
 Write-Host ''
 Write-Host "App pool-ul IIS: Identity = $netbios\$ServiceAccount. Membrii noi ai grupurilor trebuie să se deconecteze/reconecteze" `

@@ -29,7 +29,7 @@ public sealed class ApprovalAndNotificationTests : IDisposable
     private HttpClient Admin()
     {
         var c = _factory.CreateClient();
-        c.DefaultRequestHeaders.Add("X-Dev-Groups", "CONTOSO\\MDel-Admins");
+        c.DefaultRequestHeaders.Add("X-Dev-Groups", "CONTOSO\\MDel-Admins,CONTOSO\\MDel-System");
         return c;
     }
 
@@ -143,7 +143,7 @@ public sealed class ApprovalAndNotificationTests : IDisposable
         var d = await Create(AdminApprover(), Request(DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2)));
         var admin = _factory.CreateClient();
         admin.DefaultRequestHeaders.Add("X-Dev-User", "CONTOSO\\maria.ionescu");
-        admin.DefaultRequestHeaders.Add("X-Dev-Groups", "CONTOSO\\MDel-Admins");
+        admin.DefaultRequestHeaders.Add("X-Dev-Groups", "CONTOSO\\MDel-Admins,CONTOSO\\MDel-System");
 
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync($"/api/delegations/{d.Id}/approve", new { })).StatusCode);
         Assert.False((await admin.GetFromJsonAsync<DetailDto>($"/api/delegations/{d.Id}", Json))!.Actions.CanApprove);

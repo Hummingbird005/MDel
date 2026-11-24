@@ -19,7 +19,13 @@ public class SetupTests
 {
     private sealed record MeDto(string SamAccountName, string DisplayName, string[] Roles);
 
-    private sealed class SetupFactory(
+    /// <summary>Fără grupuri configurate nicăieri (nici în appsettings.Development.json): rolurile vin doar din adminul inițial.</summary>
+    internal static readonly (string Key, string Value)[] NoConfiguredGroups =
+    [
+        ("Authentication:Groups:Admins", ""), ("Authentication:Groups:Approvers", ""), ("Authentication:Groups:SystemAdmins", ""),
+    ];
+
+    internal sealed class SetupFactory(
         InMemoryDatabaseRoot root,
         string dbName,
         IReadOnlyDictionary<string, string> config,
@@ -90,7 +96,7 @@ public class SetupTests
     }
 
     [Fact]
-    public async Task Settings_only_from_appsettings_overwrite_on_startup_and_encrypt_the_password()
+    public async Task Overwrite_on_startup_applies_the_file_but_accounts_and_passwords_are_refused()
     {
         var root = new InMemoryDatabaseRoot();
         var dbName = Guid.NewGuid().ToString();
@@ -98,38 +104,27 @@ public class SetupTests
         {
             ["Setup:OverwriteSettingsOnStartup"] = "true",
             ["Setup:InitialSettings:Ad.Domain"] = "contoso.local",
+            // Conturile și parolele nu se acceptă din fișier: doar din interfață.
             ["Setup:InitialSettings:Ad.ServiceUser"] = "CONTOSO\\svc-mdel",
-            ["Setup:InitialSettings:Ad.ServicePassword"] = "P@rola-AD-1",
+            ["Setup:InitialSettings:Ad.ServicePassword"] = "P@rola-din-fisier",
+            ["Setup:InitialSettings:Smtp.User"] = "smtp-din-fisier",
         };
 
         await using (var first = new SetupFactory(root, dbName, config))
         {
             first.CreateClient();
-            Assert.Equal("CONTOSO\\svc-mdel", await first.SettingAsync(SettingKeys.AdServiceUser));
-            // În bază parola e criptată; serviciile o citesc decriptată.
-            Assert.NotEqual("P@rola-AD-1", await first.SettingAsync(SettingKeys.AdServicePassword));
-            using var scope = first.Services.CreateScope();
-            Assert.Equal("P@rola-AD-1", await scope.ServiceProvider.GetRequiredService<ISettingsService>()
-                .GetSecretAsync(SettingKeys.AdServicePassword));
+            Assert.Equal("contoso.local", await first.SettingAsync(SettingKeys.AdDomain));
+            Assert.True(string.IsNullOrEmpty(await first.SettingAsync(SettingKeys.AdServiceUser)));
+            Assert.True(string.IsNullOrEmpty(await first.SettingAsync(SettingKeys.AdServicePassword)));
+            Assert.True(string.IsNullOrEmpty(await first.SettingAsync(SettingKeys.SmtpUser)));
         }
 
-        // Corectură în appsettings.json + repornire: noile valori înlocuiesc ce era în bază.
+        // Corectură în appsettings.json + repornire: valoarea nesecretă din fișier înlocuiește ce era în bază.
         config["Setup:InitialSettings:Ad.Domain"] = "corp.contoso.local";
-        config["Setup:InitialSettings:Ad.ServicePassword"] = "P@rola-AD-2";
         await using var second = new SetupFactory(root, dbName, config);
         second.CreateClient();
         Assert.Equal("corp.contoso.local", await second.SettingAsync(SettingKeys.AdDomain));
-        using (var scope = second.Services.CreateScope())
-        {
-            Assert.Equal("P@rola-AD-2", await scope.ServiceProvider.GetRequiredService<ISettingsService>()
-                .GetSecretAsync(SettingKeys.AdServicePassword));
-        }
-
-        // Fără modificări în fișier, repornirea nu mai scrie nimic (nici în audit).
-        var updates = second.WithAudit();
-        await using var third = new SetupFactory(root, dbName, config);
-        third.CreateClient();
-        Assert.Equal(updates, third.WithAudit());
+        Assert.True(string.IsNullOrEmpty(await second.SettingAsync(SettingKeys.AdServicePassword)));
     }
 
     [Fact]
@@ -147,15 +142,15 @@ public class SetupTests
     [InlineData("boot.admin")]
     public async Task Initial_admin_is_administrator_without_any_ad_group(string configured)
     {
-        var config = new Dictionary<string, string> { ["Setup:InitialAdmins:0"] = configured };
+        var config = NoConfiguredGroups.ToDictionary(g => g.Key, g => g.Value);
+        config["Setup:InitialAdmins:0"] = configured;
         await using var factory = new SetupFactory(new InMemoryDatabaseRoot(), Guid.NewGuid().ToString(), config);
 
         var admin = factory.CreateClient();
         admin.DefaultRequestHeaders.Add("X-Dev-User", "CONTOSO\\boot.admin");
         admin.DefaultRequestHeaders.Add("X-Dev-Groups", "none");
         var me = await admin.GetFromJsonAsync<MeDto>("/api/me");
-        Assert.Contains(AppRoles.Admin, me!.Roles);
-        Assert.DoesNotContain(AppRoles.Approver, me.Roles);
+        Assert.Equal(AppRoles.All.Order(), me!.Roles.Order()); // toate rolurile, cât timp nu e configurat niciun grup
 
         var settings = await admin.GetAsync("/api/admin/settings");
         Assert.True(settings.IsSuccessStatusCode);
@@ -171,9 +166,9 @@ public class SetupTests
     [Fact]
     public async Task Login_works_while_ad_is_not_configured_yet()
     {
-        await using var factory = new SetupFactory(new InMemoryDatabaseRoot(), Guid.NewGuid().ToString(),
-            new Dictionary<string, string> { ["Setup:InitialAdmins:0"] = "CONTOSO\\boot.admin" },
-            new UnconfiguredDirectory());
+        var config = NoConfiguredGroups.ToDictionary(g => g.Key, g => g.Value);
+        config["Setup:InitialAdmins:0"] = "CONTOSO\\boot.admin";
+        await using var factory = new SetupFactory(new InMemoryDatabaseRoot(), Guid.NewGuid().ToString(), config, new UnconfiguredDirectory());
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Dev-User", "CONTOSO\\boot.admin");

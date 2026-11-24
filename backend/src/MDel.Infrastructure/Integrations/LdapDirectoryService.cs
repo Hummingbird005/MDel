@@ -5,18 +5,16 @@ using System.Text.RegularExpressions;
 using MDel.Application.Abstractions;
 using MDel.Domain;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace MDel.Infrastructure.Integrations;
 
 /// <summary>
 /// Acces la Active Directory prin LDAP (System.DirectoryServices.Protocols).
-/// Conexiunea vine din <c>appsettings.json</c> (secțiunea <c>ActiveDirectory</c>, când <c>Enabled = true</c>)
-/// sau din ecranul Setări. Fără cont de citire se folosește identitatea procesului (app pool) prin Negotiate.
+/// Conexiunea se configurează doar din ecranul Setări → Active Directory; contul și parola de citire sunt
+/// salvate criptat în baza de date. Fără cont de citire se folosește identitatea procesului (app pool) prin Negotiate.
 /// </summary>
 public sealed partial class LdapDirectoryService(
     ISettingsService settings,
-    IOptionsMonitor<ActiveDirectoryOptions> options,
     ILogger<LdapDirectoryService> logger) : IDirectoryService
 {
     private static readonly string[] UserAttributes =
@@ -61,12 +59,12 @@ public sealed partial class LdapDirectoryService(
                 {
                     var request = new SearchRequest(searchBase, "(objectClass=*)", SearchScope.Base, "distinguishedName");
                     await SendAsync(connection, request);
-                    lines.Add($"Search base '{searchBase}': OK.");
+                    lines.Add($"Search OU '{searchBase}': OK.");
                 }
                 catch (DirectoryOperationException ex)
                 {
                     allOk = false;
-                    lines.Add($"Search base '{searchBase}': {ex.Response?.ResultCode} – check the DN (it must exist and be readable).");
+                    lines.Add($"Search OU '{searchBase}': {ex.Response?.ResultCode} – check the distinguished name (it must exist and be readable).");
                 }
             }
 
@@ -82,18 +80,19 @@ public sealed partial class LdapDirectoryService(
 
     // ------------------------------------------------------------------ Configurare
 
-    /// <summary>Parametrii conexiunii: din appsettings.json (dacă e activat) sau din ecranul Setări.</summary>
+    /// <summary>Parametrii conexiunii, citiți la fiecare folosire din setările salvate (utilizatorul și parola, decriptate).</summary>
     internal async Task<LdapConnectionInfo> ResolveAsync(CancellationToken ct)
     {
-        var o = options.CurrentValue;
-        if (o.Enabled) return LdapConnectionInfo.FromOptions(o);
-
-        var server = await settings.GetAsync(SettingKeys.AdLdapServer, ct);
-        var domain = await settings.GetAsync(SettingKeys.AdDomain, ct);
-        var baseDn = await settings.GetAsync(SettingKeys.AdBaseDn, ct);
-        var user = await settings.GetAsync(SettingKeys.AdServiceUser, ct);
-        var password = string.IsNullOrWhiteSpace(user) ? null : await settings.GetSecretAsync(SettingKeys.AdServicePassword, ct);
-        return LdapConnectionInfo.FromSettings(server, domain, baseDn, user, password);
+        var user = await settings.GetSecretAsync(SettingKeys.AdServiceUser, ct);
+        return LdapConnectionInfo.FromSettings(
+            server: await settings.GetAsync(SettingKeys.AdLdapServer, ct),
+            domain: await settings.GetAsync(SettingKeys.AdDomain, ct),
+            port: await settings.GetAsync(SettingKeys.AdPort, ct),
+            useSsl: await settings.GetBoolAsync(SettingKeys.AdUseSsl, false, ct),
+            validateCertificate: await settings.GetBoolAsync(SettingKeys.AdValidateCertificate, true, ct),
+            searchBases: await settings.GetAsync(SettingKeys.AdSearchBases, ct),
+            user: user,
+            password: string.IsNullOrWhiteSpace(user) ? null : await settings.GetSecretAsync(SettingKeys.AdServicePassword, ct));
     }
 
     private LdapConnection Connect(LdapConnectionInfo info)
@@ -111,7 +110,7 @@ public sealed partial class LdapDirectoryService(
             connection.SessionOptions.SecureSocketLayer = true;
             if (!info.ValidateCertificate && OperatingSystem.IsWindows())
             {
-                logger.LogWarning("ActiveDirectory:ValidateCertificate is false – the domain controller certificate is not checked.");
+                logger.LogWarning("AD setting \"Validate the certificate\" is off – the domain controller certificate is not checked.");
                 connection.SessionOptions.VerifyServerCertificate = (_, _) => true;
             }
         }
@@ -159,7 +158,7 @@ public sealed partial class LdapDirectoryService(
             ? a[0]?.ToString()
             : null;
         return string.IsNullOrWhiteSpace(naming)
-            ? throw new InvalidOperationException("Could not read defaultNamingContext from the domain controller; set the search bases explicitly.")
+            ? throw new InvalidOperationException("Could not read defaultNamingContext from the domain controller; set the search OUs explicitly.")
             : [naming];
     }
 
@@ -239,22 +238,22 @@ public sealed partial class LdapDirectoryService(
         var data = AdDataCode().Match(server) is { Success: true } m ? m.Groups[1].Value.ToLowerInvariant() : null;
         var hint = data switch
         {
-            "52e" => "wrong user name or password (BindUser / BindPassword)",
-            "525" => "the bind user does not exist",
-            "530" or "531" => "the bind user may not log on now / from this computer",
-            "532" or "773" => "the bind user's password expired or must be changed",
-            "533" => "the bind user is disabled",
-            "701" => "the bind user's account expired",
-            "775" => "the bind user is locked out",
+            "52e" => "wrong service account or password",
+            "525" => "the service account does not exist",
+            "530" or "531" => "the service account may not log on now / from this computer",
+            "532" or "773" => "the service account's password expired or must be changed",
+            "533" => "the service account is disabled",
+            "701" => "the service account has expired",
+            "775" => "the service account is locked out",
             _ => ldap.ErrorCode switch
             {
-                49 => "invalid credentials (BindUser / BindPassword)",
+                49 => "invalid credentials (service account / password)",
                 81 when info?.UseSsl == true =>
                     $"cannot reach {info.Host}:{info.Port} over SSL – check the port (636) and the firewall, and that the " +
-                    "domain controller certificate is trusted on this server and its name matches Server",
+                    "domain controller certificate is trusted on this server and its name matches the server name entered",
                 81 => $"cannot reach {info?.Host}:{info?.Port} – check the server name, the port and the firewall",
-                8 => "the domain controller requires a signed or SSL connection: set UseSsl = true (port 636)",
-                13 => "the domain controller requires SSL for this kind of bind: set UseSsl = true (port 636)",
+                8 => "the domain controller requires a signed or SSL connection: turn on \"Use SSL\" (port 636)",
+                13 => "the domain controller requires SSL for this kind of bind: turn on \"Use SSL\" (port 636)",
                 _ => null,
             },
         };
@@ -299,7 +298,7 @@ public sealed partial class LdapDirectoryService(
     }
 }
 
-/// <summary>Parametrii unei conexiuni LDAP, din oricare sursă (appsettings.json sau Setări).</summary>
+/// <summary>Parametrii unei conexiuni LDAP, construiți din Setări → Active Directory.</summary>
 public sealed record LdapConnectionInfo(
     string Source,
     string Host,
@@ -314,34 +313,28 @@ public sealed record LdapConnectionInfo(
     TimeSpan Timeout)
 {
     public string Describe() =>
-        $"{Source}, {Host}:{Port}{(UseSsl ? " SSL" : "")}, {AuthType} as " +
+        $"{Host}:{Port}{(UseSsl ? " SSL" : "")}, {AuthType} as " +
         (string.IsNullOrWhiteSpace(BindUser) ? "the application pool identity" : BindUser);
 
-    public static LdapConnectionInfo FromOptions(ActiveDirectoryOptions o)
-    {
-        if (string.IsNullOrWhiteSpace(o.Server))
-            throw new InvalidOperationException("ActiveDirectory:Server is empty in appsettings.json.");
-
-        var (host, port, ssl) = ParseServer(o.Server.Trim(), o.UseSsl, o.Port);
-        var bases = (o.SearchBases ?? []).Where(b => !string.IsNullOrWhiteSpace(b)).Select(b => b.Trim()).ToArray();
-        return Create("appsettings.json", host, port, ssl, o.ValidateCertificate, o.AuthType, o.BindUser, o.BindPassword,
-            o.Domain, bases, TimeSpan.FromSeconds(Math.Clamp(o.TimeoutSeconds, 3, 120)));
-    }
-
-    public static LdapConnectionInfo FromSettings(string? server, string? domain, string? baseDn, string? user, string? password)
+    /// <summary>Din setările salvate (Setări → Active Directory).</summary>
+    public static LdapConnectionInfo FromSettings(string? server, string? domain, string? port, bool useSsl,
+        bool validateCertificate, string? searchBases, string? user, string? password)
     {
         // Fără server explicit, se folosește domeniul (localizare DC prin DNS).
         var target = string.IsNullOrWhiteSpace(server) ? domain : server;
         if (string.IsNullOrWhiteSpace(target))
-            throw new InvalidOperationException("AD is not configured: set the LDAP server or the domain in Administration.");
+            throw new InvalidOperationException("AD is not configured: set the LDAP server or the domain in Settings → Active Directory.");
 
         // "ldaps://dc01:636" sau "dc01" / "dc01:389"
-        var (host, port, ssl) = ParseServer(target.Trim(), useSsl: false, port: null);
-        string[] bases = !string.IsNullOrWhiteSpace(baseDn) ? [baseDn.Trim()]
-            : !string.IsNullOrWhiteSpace(domain) ? [LdapDirectoryService.DomainToBaseDn(domain)]
-            : [];
-        return Create("Settings", host, port, ssl, true, null, user, password, domain, bases, TimeSpan.FromSeconds(15));
+        var (host, resolvedPort, ssl) = ParseServer(target.Trim(), useSsl, int.TryParse(port, out var p) ? p : null);
+        return Create("Settings", host, resolvedPort, ssl, validateCertificate, null, user, password, domain,
+            ParseSearchBases(searchBases), TimeSpan.FromSeconds(15));
     }
+
+    /// <summary>Un DN pe linie; goale și duplicatele se ignoră.</summary>
+    public static string[] ParseSearchBases(string? value) =>
+        (value ?? "").Split(['\r', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
     private static LdapConnectionInfo Create(string source, string host, int port, bool ssl, bool validateCertificate,
         string? authType, string? user, string? password, string? domain, string[] bases, TimeSpan timeout)
@@ -351,11 +344,11 @@ public sealed record LdapConnectionInfo(
         if (auth == AuthType.Basic)
         {
             if (user is null)
-                throw new InvalidOperationException("Basic (simple bind) needs a BindUser and BindPassword.");
+                throw new InvalidOperationException("A distinguished name (CN=…) needs the service account password: set the account and password in Settings → Active Directory.");
             if (!ssl)
                 throw new InvalidOperationException(
-                    "Basic (simple bind) sends the password in clear text: use UseSsl = true (port 636), " +
-                    "or a CORP\\user / user@domain account with Negotiate.");
+                    "An account given as a distinguished name (CN=…) sends the password in clear text: turn on \"Use SSL\" (LDAPS, port 636), " +
+                    "or enter the account as CORP\\user or user@domain.");
         }
 
         return new LdapConnectionInfo(source, host, port, ssl, validateCertificate, auth, user, password,

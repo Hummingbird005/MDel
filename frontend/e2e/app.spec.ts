@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { ADMIN, APPROVER, NO_ROLE } from './helpers'
+import { ADMIN, APPROVER, DELEGATION_ADMIN, NO_ROLE, SYSTEM_ADMIN } from './helpers'
 
 test('tema dark se păstrează după reîncărcare', async ({ browser }) => {
   const context = await browser.newContext({ extraHTTPHeaders: ADMIN, colorScheme: 'light' })
@@ -35,6 +35,59 @@ test('rolurile limitează accesul la pagini', async ({ browser }) => {
   await expect(user.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
 })
 
+test('administratorul de delegări nu vede Setări și Audit, administratorul de sistem nu vede delegările', async ({ browser }) => {
+  const delegations = await (await browser.newContext({ extraHTTPHeaders: DELEGATION_ADMIN })).newPage()
+  await delegations.goto('/delegations')
+  await expect(delegations.getByRole('link', { name: 'Delegări' })).toBeVisible()
+  await expect(delegations.getByRole('link', { name: 'Setări' })).toHaveCount(0)
+  await expect(delegations.getByRole('link', { name: /Audit/ })).toHaveCount(0)
+  await delegations.goto('/admin')
+  await expect(delegations.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
+  await delegations.goto('/audit')
+  await expect(delegations.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
+
+  const system = await (await browser.newContext({ extraHTTPHeaders: SYSTEM_ADMIN })).newPage()
+  await system.goto('/admin')
+  await expect(system.getByRole('tab', { name: 'Active Directory' })).toBeVisible()
+  await expect(system.getByRole('link', { name: 'Setări' })).toBeVisible()
+  await expect(system.getByRole('link', { name: /Audit/ })).toBeVisible()
+  await expect(system.getByRole('link', { name: 'Delegări' })).toHaveCount(0)
+  await system.goto('/delegations')
+  await expect(system.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
+})
+
+test('Active Directory se configurează din Setări, iar contul și parola nu se mai afișează', async ({ browser, request }) => {
+  const page = await (await browser.newContext({ extraHTTPHeaders: SYSTEM_ADMIN })).newPage()
+  await page.goto('/admin')
+  await page.getByLabel('Server LDAP / controler de domeniu').fill('dc01.corp.local')
+  await page.getByRole('switch', { name: 'Folosește SSL (LDAPS)' }).click()
+  await page.getByLabel('Port').fill('636')
+  await page.getByLabel('OU-uri de căutare').fill('OU=Angajati,DC=corp,DC=local\nOU=Externi,DC=corp,DC=local')
+  await page.getByLabel('Cont de citire din AD').fill('CN=svc-mdel,OU=Servicii,DC=corp,DC=local')
+  await page.getByLabel('Parola contului').fill('Parola-Secreta-1')
+  await page.getByRole('button', { name: 'Salvează' }).click()
+  await expect(page.getByText('Setările au fost salvate.')).toBeVisible()
+
+  // După reîncărcare: cele nesecrete se văd, contul și parola apar doar ca „setate”.
+  await page.reload()
+  await expect(page.getByLabel('Server LDAP / controler de domeniu')).toHaveValue('dc01.corp.local')
+  await expect(page.getByLabel('OU-uri de căutare')).toHaveValue(/OU=Externi/)
+  await expect(page.getByLabel('Cont de citire din AD')).toHaveValue('')
+  await expect(page.getByLabel('Cont de citire din AD')).toHaveAttribute('placeholder', /setat/)
+  await expect(page.getByLabel('Parola contului')).toHaveAttribute('placeholder', /setat/)
+
+  const raw = await (await request.get('http://localhost:5080/api/admin/settings', { headers: SYSTEM_ADMIN })).text()
+  expect(raw).not.toContain('Parola-Secreta-1')
+  expect(raw).not.toContain('svc-mdel')
+
+  // Curățenie: fără server AD completat, aplicația de test revine la AD-ul simulat folosit de celelalte teste.
+  const cleanup = await request.put('http://localhost:5080/api/admin/settings', {
+    headers: SYSTEM_ADMIN,
+    data: { values: { 'Ad.LdapServer': '', 'Ad.Port': '', 'Ad.UseSsl': 'false', 'Ad.SearchBases': '', 'Ad.ServiceUser': '', 'Ad.ServicePassword': '' } },
+  })
+  expect(cleanup.status()).toBe(204)
+})
+
 test('auditul arată acțiunile și detaliul cu valori vechi/noi', async ({ browser, request }) => {
   const r = await request.put('http://localhost:5080/api/admin/settings', {
     headers: ADMIN,
@@ -44,7 +97,10 @@ test('auditul arată acțiunile și detaliul cu valori vechi/noi', async ({ brow
 
   const page = await (await browser.newContext({ extraHTTPHeaders: ADMIN })).newPage()
   await page.goto('/audit')
+  // Așteptăm lista filtrată, altfel primul rând poate fi încă din lista nefiltrată (cursă sub încărcare).
+  const filtered = page.waitForResponse((r) => r.url().includes('/api/audit?') && r.url().includes('action=Settings'))
   await page.locator('#audit-action').selectOption('Settings.')
+  await filtered
   await page.locator('tbody tr').first().click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('cell', { name: 'Retention.AuditDays', exact: true })).toBeVisible()

@@ -80,8 +80,7 @@ La fiecare versiune nouă, în acest caz: rulați din nou `efbundle.exe` înaint
   "Authentication": { "Mode": "Negotiate" },
   "Setup": {
     "MigrateDatabaseOnStartup": true,
-    "InitialAdmins": [ "CONTOSO\\ion.popescu" ],
-    "InitialSettings": { "Ad.Domain": "contoso.local", "Groups.Admins": "CONTOSO\\MDel-Admins", "Groups.Approvers": "CONTOSO\\MDel-Approvers" }
+    "InitialAdmins": [ "CONTOSO\\ion.popescu" ]
   },
   "Integrations": { "UseFakes": false },
   "DataProtection": { "KeysPath": "C:\\ProgramData\\MDel\\keys" },
@@ -89,35 +88,36 @@ La fiecare versiune nouă, în acest caz: rulați din nou `efbundle.exe` înaint
 }
 ```
 
-- `ActiveDirectory` – conexiunea la AD direct din fișier (server, port 636 + SSL, cont de citire, OU-uri de căutare);
-  cu `Enabled: true` are prioritate față de ecranul Setări. Detalii: [AD-SETUP.md](AD-SETUP.md).
-- `Setup:InitialAdmins` – **adminul**: administrator indiferent de grupurile AD (conectare cu contul Windows).
-- `Setup:InitialSettings` – setări (AD inclusiv contul și parola de citire, grupuri, adresa aplicației…) copiate în
-  Setări la pornire: doar dacă sunt goale sau, cu `Setup:OverwriteSettingsOnStartup = true`, la fiecare pornire.
-  Lista completă și exemplele: [AD-SETUP.md](AD-SETUP.md).
-- `Authentication:Groups` – alternativă mai veche la `Groups.*` din `InitialSettings`: folosite doar cât timp
-  grupurile din Setări sunt goale.
-- `DataProtection:KeysPath` – folderul cheilor care criptează parolele din Setări. Contul app pool-ului trebuie să aibă
-  drept de **scriere**. Includeți-l în backup; dacă se pierde, parolele din Setări trebuie reintroduse.
+- **Active Directory, Exchange și SMTP nu se configurează în fișier**, ci din aplicație (Setări). Conturile și parolele se
+  salvează **criptate în baza de date** și nu apar în fișiere, în API sau în audit.
+- `Setup:InitialAdmins` – **adminul inițial**: primește cele trei roluri (Administrator delegări, Aprobator, Administrator
+  sistem), fiecare până se completează grupul acelui rol în Setări. Detalii: [AD-SETUP.md](AD-SETUP.md), pasul 7.
+- `Setup:InitialSettings` (opțional) – setări **nesecrete** (grupuri, adresa aplicației…) copiate în Setări la pornire,
+  doar dacă sunt goale sau, cu `Setup:OverwriteSettingsOnStartup = true`, la fiecare pornire. Conturile și parolele se
+  ignoră aici.
+- `Authentication:Groups` (`Admins`, `Approvers`, `SystemAdmins`) – alternativă la grupurile din Setări, folosită doar cât
+  timp acestea sunt goale.
+- `DataProtection:KeysPath` – folderul cheilor care criptează conturile și parolele din Setări. Contul app pool-ului trebuie
+  să aibă drept de **scriere**. Includeți-l în backup; dacă se pierde, conturile și parolele se reintroduc din Setări.
 - Folderul de fișiere (Setări → Fișiere) – drept de **modificare** pentru contul app pool-ului.
 
 ## 7. Prima pornire
 
-1. Porniți app pool-ul: baza se creează și setările inițiale se aplică (vezi [AD-SETUP.md](AD-SETUP.md), „Prima pornire”).
-   Deschideți `https://mdel.contoso.local/api/health/ready` – trebuie să răspundă `"status":"ready"`.
-   App pool oprit / HTTP 500.30 = baza nu a putut fi creată: Event Viewer → Application (connection string, drepturi SQL).
-2. Deschideți aplicația cu **adminul inițial** (`Setup:InitialAdmins`) sau un cont din grupul de administratori →
-   **Setări** și completați / verificați, testând fiecare tab:
-   1. **Active Directory** – domeniu, server LDAP, Base DN (+ cont, dacă nu se folosește identitatea app pool-ului) → Testează conexiunea.
-   2. **Grupuri** – grupurile AD și adresele lor de email.
+1. Porniți app pool-ul: baza se creează singură. Deschideți `https://mdel.contoso.local/api/health/ready` – trebuie să
+   răspundă `"status":"ready"`. App pool oprit / HTTP 500.30 = baza nu a putut fi creată: Event Viewer → Application
+   (connection string, drepturi SQL).
+2. Deschideți aplicația cu **adminul inițial** (`Setup:InitialAdmins`) → **Setări** și completați, testând fiecare tab:
+   1. **Active Directory** – domeniu, server, SSL (LDAPS), OU-uri de căutare, cont și parolă de citire → Salvează →
+      Testează conexiunea ([AD-SETUP.md](AD-SETUP.md), pasul 8).
+   2. **Grupuri** – grupurile AD ale celor trei roluri și adresele de email ale administratorilor / aprobatorilor.
+      Grupul administratorilor de sistem îl completați ultimul, după ce sunteți membru.
    3. **Exchange** – `http://ex01.contoso.local/PowerShell/` (+ cont) → Testează; verificați forwardul unei căsuțe de test.
    4. **Email (SMTP)** – server, port, expeditor → Testează, cu email de test.
    5. **Fișiere** – calea de stocare → Testează (scriere/citire/ștergere).
    6. **General** – adresa aplicației (pentru link-urile din emailuri), limba implicită.
    7. **Grup de informare** – utilizatorii care primesc toate notificările.
    8. **Șabloane email** (opțional) – adaptați textul mesajelor în română; verificați în previzualizare.
-3. Opțional, când grupul de administratori e configurat: verificați că un membru intră ca administrator, apoi
-   goliți `Setup:InitialAdmins` și reporniți app pool-ul.
+3. Verificați că un membru din fiecare grup are rolul așteptat, apoi goliți `Setup:InitialAdmins` și reporniți app pool-ul.
 4. Rulați checklist-ul din [UAT.md](UAT.md).
 
 ## 8. Operare
@@ -142,8 +142,8 @@ app pool-ul (migrările noi se aplică la pornire; cu `MigrateDatabaseOnStartup 
 | Simptom | Cauză probabilă |
 |---|---|
 | „Autentificarea AD a eșuat” în browser | Windows Authentication dezactivat în IIS, sau site-ul nu e în zona Intranet a browserului (Kerberos/NTLM automat) |
-| Utilizatorul intră, dar fără meniuri | nu e în grupurile configurate (Setări → Grupuri sau `Authentication:Groups`); rolurile se reîmprospătează în max. 5 minute |
+| Utilizatorul intră, dar fără meniuri | nu e în grupurile configurate (Setări → Grupuri sau `Authentication:Groups`); Setări și Audit cer rolul **Administrator sistem**; rolurile se reîmprospătează în max. 5 minute |
 | Test Exchange: „Access denied” / „Kerberos” | contul nu are rolul RBAC sau `RemotePowerShellEnabled`; URI-ul trebuie să folosească numele serverului (nu IP) pentru Kerberos |
 | Delegările nu se activează la oră | app pool-ul s-a oprit (Start Mode / Idle Time-out); `Scheduler:Enabled` = false |
-| „Secret cannot be decrypted” | cheile Data Protection s-au schimbat/pierdut – reintroduceți parolele în Setări |
+| „Secret cannot be decrypted” | cheile Data Protection s-au schimbat/pierdut – reintroduceți conturile și parolele în Setări |
 | Upload eșuat la fișiere mari (413) | `maxAllowedContentLength` din `web.config` / `Uploads:MaxRequestBodyBytes` |

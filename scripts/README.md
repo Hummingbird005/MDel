@@ -7,13 +7,13 @@ Scripturile se rulează pe un server sau o stație din domeniu, în **Windows Po
 ```powershell
 # modulul ActiveDirectory (RSAT); din Exchange Management Shell dacă folosiți -MailEnableGroups
 .\New-MDelAdObjects.ps1 -OrganizationalUnit 'OU=MDel,DC=contoso,DC=local' -AppHostName mdel.contoso.local `
-    -AdminMembers ion.popescu -ApproverMembers dan.georgescu -MailEnableGroups -WhatIf
+    -AdminMembers ion.popescu -ApproverMembers dan.georgescu -SystemAdminMembers ion.popescu -MailEnableGroups -WhatIf
 ```
 
-Creează (doar ce lipsește) contul de serviciu `svc-mdel`, grupurile `MDel-Admins` / `MDel-Approvers` cu membrii,
-SPN-urile `HTTP/<AppHostName>` și, cu `-MailEnableGroups`, adresele de email ale grupurilor. La final afișează
-secțiunea `Setup` pentru `appsettings.json` (adminul inițial + setările AD). Fără `-WhatIf` aplică modificările.
-Detalii: [docs/AD-SETUP.md](../docs/AD-SETUP.md).
+Creează (doar ce lipsește) contul de serviciu `svc-mdel`, grupurile `MDel-Admins`, `MDel-Approvers` și `MDel-System` cu
+membrii, SPN-urile `HTTP/<AppHostName>` și, cu `-MailEnableGroups`, adresele de email ale grupurilor de administratori și
+aprobatori. La final afișează ce trebuie completat: adminul inițial în `appsettings.json`, iar AD-ul și grupurile în aplicație
+(Setări). Fără `-WhatIf` aplică modificările. Detalii: [docs/AD-SETUP.md](../docs/AD-SETUP.md).
 
 ## 1. Rol RBAC minim pentru contul de serviciu
 

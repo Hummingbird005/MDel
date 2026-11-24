@@ -131,3 +131,32 @@ proprietarului căsuței. Variantele posibile, de activat separat din Setări �
 Pentru variantele 1 și 2: texte editabile în română (ca șabloanele de email), activare/oprire odată cu forwardul,
 restaurarea stării anterioare, iar rolul RBAC (`scripts/New-MDelRbacRole.ps1`) și smoke-test-ul extinse cu
 `Set-MailboxAutoReplyConfiguration` și parametrul `-MailTip`.
+
+## 13. Roluri separate și configurarea AD din interfață (decis pe 2026-11-24)
+
+**Cerințe confirmate**
+1. Configurarea AD se face **strict din interfață** (Setări → Active Directory); nimic despre AD în `appsettings.json`.
+2. Conturile și parolele folosite (AD, Exchange, SMTP) se țin **criptate în baza de date** (Data Protection), nu în cod
+   sau în fișiere de configurare.
+3. **Rol nou „Administrator sistem”** (`SystemAdmin`) pentru meniurile **Setări** și **Istoric / Audit**, separat de
+   „Administrator” (delegări) și de „Aprobator”. Un utilizator poate avea oricâte roluri.
+4. Rolul se atribuie printr-un **grup AD**, ca celelalte două (Setări → Grupuri, sau `Authentication:Groups:SystemAdmins`
+   în `appsettings.json` pentru prima pornire).
+5. **Adminul din `Setup:InitialAdmins`** primește toate rolurile; fiecare rol îl păstrează **până se completează grupul
+   acelui rol** în Setări (sau în `Authentication:Groups`). Din acel moment rolul vine doar din grup.
+
+**Etape** (un singur PR, câte un commit pe etapă)
+
+| Etapa | Conținut | Verificare |
+|---|---|---|
+| 8 – Roluri | `SystemAdmin` în `AppRoles`; Setări / Audit / testele de conexiune / grup de informare / coada de emailuri cer `SystemAdmin`; căutarea de utilizatori în AD rămâne pentru Administrator **și** Administrator sistem; setarea `Groups.SystemAdmins`; regula adminului inițial pe roluri; `/api/me` returnează rolul; meniuri, rute și etichete în interfață (ro/en) | teste: acces pe fiecare rol, cumul de roluri, adminul inițial până la completarea grupului |
+| 9 – AD din interfață | secțiunea `ActiveDirectory` din `appsettings.json` dispare; setări noi pentru AD (port, SSL, validarea certificatului, OU-uri de căutare); contul de citire AD, contul Exchange și contul SMTP devin secrete criptate (inclusiv utilizatorul); criptarea valorilor vechi existente la pornire; `Setup:InitialSettings` refuză cheile secrete; în Development, AD real imediat ce e completat în Setări | teste unitare + AD real (Samba) cu configurare doar din Setări; upgrade pe SQL Server real, cu valori vechi necriptate |
+| 10 – Documentație | AD-SETUP, DEPLOY, LOCAL-RUN, UAT, README, scriptul PowerShell (grup nou) | citit cap-coadă; verificare sintaxă PowerShell |
+
+**Stare:** etapele 8–10 sunt implementate și verificate pe SQL Server 2022 și pe un AD real (Samba, `corp.local`, LDAPS).
+
+**Efecte de reținut**
+- Grupurile de administratori existente **nu** mai văd Setări / Audit decât dacă le dați și rolul nou
+  (grupul `Groups.SystemAdmins`).
+- Parolele deja introduse rămân valabile; utilizatorii (AD / Exchange / SMTP) deja salvați se criptează automat la
+  prima pornire după actualizare.

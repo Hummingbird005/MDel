@@ -17,7 +17,7 @@ export function DelegationDetailPage() {
   const { t } = useTranslation()
   const drawer = useDelegationDrawer()
   const { data: me } = useCurrentUser()
-  const isAdmin = hasRole(me, 'Admin')
+  const canSeeAudit = hasRole(me, 'SystemAdmin')
   const [dialog, setDialog] = useState<'stop' | 'approve' | 'reject' | null>(null)
   const query = useQuery({ queryKey: ['delegations', Number(id)], queryFn: () => delegationsApi.get(Number(id)) })
 
@@ -104,7 +104,7 @@ export function DelegationDetailPage() {
             <CardHeader
             title={t('detail.history')}
             actions={
-              isAdmin && (
+              canSeeAudit && (
                 <Link to={`/audit?entityType=Delegation&entityId=${d.id}`} className="text-xs font-medium text-accent-text hover:underline">
                   {t('detail.auditTrail')} →
                 </Link>

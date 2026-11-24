@@ -29,7 +29,7 @@ public sealed class MeController(MDelDbContext db, ICurrentUser currentUser, IAu
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == currentUser.UserId, ct);
         if (user is null) return Unauthorized();
 
-        var roles = new[] { AppRoles.Admin, AppRoles.Approver }.Where(currentUser.IsInRole).ToList();
+        var roles = AppRoles.All.Where(currentUser.IsInRole).ToList();
         return new CurrentUserDto(user.SamAccountName, user.DisplayName, user.Email, roles, user.PreferredLanguage);
     }
 

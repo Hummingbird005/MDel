@@ -41,8 +41,8 @@ const navItems: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, roles: ['Admin', 'Approver'] },
   { to: '/delegations', labelKey: 'nav.delegations', icon: ArrowLeftRight, roles: ['Admin', 'Approver'] },
   { to: '/approvals', labelKey: 'nav.approvals', icon: CheckCheck, roles: ['Approver'] },
-  { to: '/audit', labelKey: 'nav.audit', icon: History, roles: ['Admin'] },
-  { to: '/admin', labelKey: 'nav.admin', icon: Settings, roles: ['Admin'] },
+  { to: '/audit', labelKey: 'nav.audit', icon: History, roles: ['SystemAdmin'] },
+  { to: '/admin', labelKey: 'nav.admin', icon: Settings, roles: ['SystemAdmin'] },
 ]
 
 export function AppShell({ user }: { user: CurrentUser }) {
@@ -73,11 +73,11 @@ function Sidebar({ user, open, onClose }: { user: CurrentUser; open: boolean; on
   const isApprover = hasRole(user, 'Approver')
   const stats = useQuery({ queryKey: ['delegations', 'stats'], queryFn: delegationsApi.stats, refetchInterval: 60_000 })
   const pending = stats.data?.byStatus.PendingApproval ?? 0
-  const isAdmin = hasRole(user, 'Admin')
+  const isSystemAdmin = hasRole(user, 'SystemAdmin')
   const failedMails = useQuery({
     queryKey: ['admin', 'notifications', 'failed-count'],
     queryFn: adminApi.failedNotifications,
-    enabled: isAdmin,
+    enabled: isSystemAdmin,
     refetchInterval: 120_000,
   })
 

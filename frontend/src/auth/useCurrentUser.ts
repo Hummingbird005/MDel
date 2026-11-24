@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 
-export type AppRole = 'Admin' | 'Approver'
+export type AppRole = 'Admin' | 'Approver' | 'SystemAdmin'
 
 export interface CurrentUser {
   samAccountName: string

@@ -20,7 +20,7 @@ Date de exemplu, rulare locală (AD, Exchange și SMTP simulate).
 | **Delegări** – filtre, sortare, export CSV | **Setări → Exchange** cu test de conexiune |
 | ![Delegări](docs/images/delegations-light.png) | ![Setări Exchange](docs/images/settings-exchange.png) |
 | **Setări → Șabloane email** (română, cu previzualizare) | |
-| ![Șabloane email](docs/images/settings-templates.png) | |
+| ![Șabloane email](docs/images/settings-templates.png) | ![Active Directory din Setări](docs/images/settings-ad.png) |
 
 <p>
   <img src="docs/images/dashboard-dark.png" alt="Dashboard (dark)" width="72%">
@@ -91,8 +91,8 @@ Pas cu pas, cu backend-ul din Visual Studio și frontend-ul din cmd: **[docs/LOC
 
 Cerințe: .NET 10 SDK, Node 22, SQL Server (implicit LocalDB, din Visual Studio).
 
-1. `backend/src/MDel.Api/appsettings.Development.json`: connection string (implicit LocalDB `MDel_Dev`), utilizatorul
-   simulat, opțional AD real (`ActiveDirectory`) și setările inițiale.
+1. `backend/src/MDel.Api/appsettings.Local.json` (în afara git, vezi LOCAL-RUN): connection string (implicit LocalDB
+   `MDel_Dev`), utilizatorul simulat și adminul inițial. AD-ul, grupurile și conturile se configurează din aplicație (Setări).
 2. `cd backend && dotnet restore MDel.slnx && dotnet run --project src/MDel.Api` (http://localhost:5080) – la pornire
    se creează baza și se aplică migrările (sau manual: `dotnet tool restore && dotnet ef database update -p src/MDel.Infrastructure -s src/MDel.Api`)
 3. `cd frontend && npm ci && npm run dev` (http://localhost:5173, proxy `/api` → 5080)
@@ -101,11 +101,12 @@ Pachetele NuGet și npm se iau din `offline/` (`backend/NuGet.config`, `frontend
 fără internet. O dependență nouă se adaugă cu `offline/create-offline-bundle.sh` (vezi [offline/README.md](offline/README.md)).
 
 În **Development**, autentificarea este simulată (`Authentication:Mode = Development`):
-utilizatorul și grupurile AD vin din `appsettings.Development.json`. Din browser, utilizatorul se schimbă cu
+utilizatorul și grupurile AD vin din `appsettings.Development.json` / `appsettings.Local.json`. Din browser, utilizatorul se schimbă cu
 `/api/dev/login-as?user=dan.georgescu&groups=MDel-Approvers` (fără parametri = înapoi la cel din fișier); în teste,
 cu headerele `X-Dev-User` și `X-Dev-Groups` (listă separată prin virgulă sau `none`).
 `Integrations:UseFakes = true` înlocuiește AD, Exchange și SMTP cu implementări in-memory; separat:
-`Integrations:FakeDirectory` / `FakeExchange` / `FakeMail`. Secțiunea `ActiveDirectory` activată folosește mereu AD-ul real.
+`Integrations:FakeDirectory` / `FakeExchange` / `FakeMail`. AD-ul simulat se folosește doar până completați serverul
+sau domeniul în Setări → Active Directory; apoi se folosește cel real, fără repornire.
 
 Pentru a încerca interfața **fără SQL Server**: `Database__UseInMemory=true dotnet run --project src/MDel.Api`
 (bază in-memory, doar în Development; datele se pierd la oprire). Setați apoi calea de fișiere în
@@ -115,14 +116,16 @@ Administrare → Fișiere.
 
 | Sistem | Implementare | Configurare (Administrare) | Test |
 |---|---|---|---|
-| Active Directory | LDAP – `System.DirectoryServices.Protocols`, Negotiate cu sign & seal sau LDAPS | domeniu, server, Base DN, cont de serviciu | bind + citire Base DN |
-| Exchange 2016 | PowerShell remoting (`/PowerShell/`, Kerberos) – `Get-Mailbox`, `Set-Mailbox`, `Get-Recipient` | URI, cont de serviciu, copie în sursă | `Get-Recipient -ResultSize 1` + citire forward |
+| Active Directory | LDAP – `System.DirectoryServices.Protocols`, Negotiate cu sign & seal sau LDAPS | domeniu, server, port, SSL, OU-uri de căutare, cont de citire | bind + citire fiecare OU |
+| Exchange 2016 | PowerShell remoting (`/PowerShell/`, Kerberos) – `Get-Mailbox`, `Set-Mailbox`, `Get-Recipient` | URI, cont, copie în sursă | `Get-Recipient -ResultSize 1` + citire forward |
 | SMTP | MailKit | server, port, TLS, utilizator, expeditor | conectare + email de test opțional |
 | Fișiere | disc local / share UNC | cale, limită MB, extensii | scriere/citire/ștergere fișier de probă |
 
-- Parolele din setări sunt criptate cu ASP.NET Core Data Protection. Cheile se păstrează în
-  `DataProtection:KeysPath` (implicit `C:\ProgramData\MDel\keys`, protejate cu DPAPI la nivel de mașină).
-  Contul app pool-ului trebuie să aibă drept de scriere acolo. Dacă cheile se pierd, parolele trebuie reintroduse.
+- **Conturile și parolele** (AD, Exchange, SMTP) se introduc doar din Setări și se salvează **criptate** în baza de date
+  (ASP.NET Core Data Protection): nu apar în cod, în `appsettings.json`, în API (se afișează doar „setat”) sau în audit.
+  Cheile se păstrează în `DataProtection:KeysPath` (implicit `C:\ProgramData\MDel\keys`, protejate cu DPAPI la nivel de mașină).
+  Contul app pool-ului trebuie să aibă drept de scriere acolo. Dacă cheile se pierd, conturile și parolele trebuie reintroduse.
+  Valorile salvate necriptat de versiuni mai vechi se criptează automat la prima pornire.
 - Fără cont de serviciu completat, AD și Exchange folosesc identitatea app pool-ului (Kerberos).
 - Contul pentru Exchange are nevoie de rolul RBAC creat cu `scripts/New-MDelRbacRole.ps1`.
 - Forwardul acceptă doar destinatari interni (`UserMailbox`, `SharedMailbox`, `LinkedMailbox`).
@@ -185,19 +188,25 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 ## Autentificare și roluri
 
 - Producție: Windows Authentication (Negotiate/Kerberos) pe IIS – vezi `web.config`.
-- Rolurile `Admin` și `Approver` se obțin din grupurile AD configurate în `AppSettings`
-  (`Groups.Admins`, `Groups.Approvers`).
-- **AD din `appsettings.json`:** secțiunea `ActiveDirectory` (`Enabled`, `Server`, `Port`, `UseSsl`, `BindUser`,
-  `BindPassword`, `SearchBases`…) configurează conexiunea LDAP/LDAPS și are prioritate față de ecranul Setări.
-- **Fără PowerShell:** conturile din `Setup:InitialAdmins` (`appsettings.json`) sunt administratori indiferent de
-  grupuri (se conectează cu Windows). `Setup:InitialSettings` configurează AD-ul (domeniu, server, cont și parolă de
-  citire – salvată criptat), grupurile și adresa aplicației; cu `Setup:OverwriteSettingsOnStartup = true` fișierul se
-  aplică la fiecare pornire. Detalii: [docs/AD-SETUP.md](docs/AD-SETUP.md) (opțional `scripts/New-MDelAdObjects.ps1`).
+- **Trei roluri**, cumulabile, fiecare dat de un grup AD (Setări → Grupuri):
+
+  | Rol | Ce vede / face |
+  |---|---|
+  | `Admin` – Administrator delegări | Dashboard, Delegări: creează, modifică, oprește |
+  | `Approver` – Aprobator | Aprobări: aprobă / respinge |
+  | `SystemAdmin` – Administrator sistem | **Setări** și **Istoric / Audit** (inclusiv testele de conexiune, șabloane, coada de emailuri) |
+
+- **Adminul inițial** (`Setup:InitialAdmins` din `appsettings.json`) primește **toate rolurile**, fiecare **până se
+  completează grupul acelui rol** în Setări (sau în `Authentication:Groups`). Din acel moment rolul vine doar din grup.
+- **AD se configurează strict din interfață** (Setări → Active Directory); nimic despre AD în fișiere. Pregătirea AD,
+  grupurile și ordinea pașilor la prima pornire: [docs/AD-SETUP.md](docs/AD-SETUP.md) (opțional `scripts/New-MDelAdObjects.ps1`).
+- `Setup:InitialSettings` poate copia în Setări valori **nesecrete** (grupuri, adresa aplicației); conturile și parolele
+  se ignoră acolo.
 
 ## Teste
 
 ```bash
-cd backend && dotnet test MDel.slnx          # 153 de teste: model EF, API, reguli, notificări, scheduler, audit
+cd backend && dotnet test MDel.slnx          # 168 de teste: model EF, API, reguli, notificări, scheduler, audit
 cd frontend && npm run lint && npm run build
 cd frontend && npm run e2e                   # Playwright: pornește backend-ul (in-memory) și Vite
 ```

@@ -48,18 +48,25 @@ public static class DependencyInjection
         services.AddScoped<RetentionService>();
         services.AddHostedService<SchedulerHostedService>();
 
-        services.Configure<ActiveDirectoryOptions>(configuration.GetSection(ActiveDirectoryOptions.SectionName));
-
         // Integrations:UseFakes = true (Development) înlocuiește AD, Exchange și SMTP cu implementări in-memory.
         // Fiecare se poate alege separat: Integrations:FakeDirectory / FakeExchange / FakeMail.
-        // Secțiunea ActiveDirectory activată (Enabled = true) înseamnă AD real, chiar și cu UseFakes.
+        // AD-ul simulat se folosește doar cât timp în Setări → Active Directory nu e completat serverul sau domeniul.
         var useFakes = configuration.GetValue("Integrations:UseFakes", false);
-        var adFromAppSettings = configuration.GetValue($"{ActiveDirectoryOptions.SectionName}:Enabled", false);
-
-        if (configuration.GetValue("Integrations:FakeDirectory", useFakes && !adFromAppSettings))
-            services.AddSingleton<IDirectoryService, FakeDirectoryService>();
-        else
-            services.AddSingleton<IDirectoryService, LdapDirectoryService>();
+        services.AddSingleton<LdapDirectoryService>();
+        services.AddSingleton<FakeDirectoryService>();
+        switch (configuration.GetValue<bool?>("Integrations:FakeDirectory"))
+        {
+            case true:
+                services.AddSingleton<IDirectoryService>(sp => sp.GetRequiredService<FakeDirectoryService>());
+                break;
+            case false:
+                services.AddSingleton<IDirectoryService>(sp => sp.GetRequiredService<LdapDirectoryService>());
+                break;
+            default:
+                if (useFakes) services.AddSingleton<IDirectoryService, ConfigurableDirectoryService>();
+                else services.AddSingleton<IDirectoryService>(sp => sp.GetRequiredService<LdapDirectoryService>());
+                break;
+        }
 
         if (configuration.GetValue("Integrations:FakeExchange", useFakes))
             services.AddSingleton<IExchangeService, FakeExchangeService>();

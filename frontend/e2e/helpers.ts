@@ -1,6 +1,11 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test'
 
-export const ADMIN = { 'X-Dev-User': 'CONTOSO\\dev.admin', 'X-Dev-Groups': 'CONTOSO\\MDel-Admins' }
+/** Administrator delegări + administrator sistem: cele mai multe teste deschid și Setări / Audit. */
+export const ADMIN = { 'X-Dev-User': 'CONTOSO\\dev.admin', 'X-Dev-Groups': 'CONTOSO\\MDel-Admins,CONTOSO\\MDel-System' }
+/** Doar delegări: fără Setări și Audit. */
+export const DELEGATION_ADMIN = { 'X-Dev-User': 'CONTOSO\\dev.delegations', 'X-Dev-Groups': 'CONTOSO\\MDel-Admins' }
+/** Doar Setări și Audit: fără delegări. */
+export const SYSTEM_ADMIN = { 'X-Dev-User': 'CONTOSO\\dev.system', 'X-Dev-Groups': 'CONTOSO\\MDel-System' }
 export const APPROVER = { 'X-Dev-User': 'CONTOSO\\dev.approver', 'X-Dev-Groups': 'CONTOSO\\MDel-Approvers' }
 export const NO_ROLE = { 'X-Dev-User': 'CONTOSO\\ion.popescu', 'X-Dev-Groups': 'none' }
 

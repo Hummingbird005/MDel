@@ -6,13 +6,17 @@ public static class SettingKeys
     // Active Directory
     public const string AdDomain = "Ad.Domain";
     public const string AdLdapServer = "Ad.LdapServer";
-    public const string AdBaseDn = "Ad.BaseDn";
+    public const string AdPort = "Ad.Port";
+    public const string AdUseSsl = "Ad.UseSsl";
+    public const string AdValidateCertificate = "Ad.ValidateCertificate";
+    public const string AdSearchBases = "Ad.SearchBases";
     public const string AdServiceUser = "Ad.ServiceUser";
     public const string AdServicePassword = "Ad.ServicePassword";
 
     // Grupuri AD mapate pe roluri
     public const string GroupAdmins = "Groups.Admins";
     public const string GroupApprovers = "Groups.Approvers";
+    public const string GroupSystemAdmins = "Groups.SystemAdmins";
     public const string GroupAdminsEmail = "Groups.AdminsEmail";
     public const string GroupApproversEmail = "Groups.ApproversEmail";
 

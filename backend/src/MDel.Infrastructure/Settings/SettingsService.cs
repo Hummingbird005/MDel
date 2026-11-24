@@ -120,6 +120,27 @@ public sealed class SettingsService(
             OldValues: oldValues, NewValues: newValues), ct);
     }
 
+    /// <summary>Valorile criptate cu Data Protection încep mereu cu acest prefix (versiunea 0 a formatului).</summary>
+    private const string ProtectedPrefix = "CfDJ8";
+
+    public async Task<int> EncryptPlainSecretsAsync(CancellationToken ct = default)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MDelDbContext>();
+        var plain = await db.AppSettings
+            .Where(s => s.IsSecret && s.Value != null && s.Value != "" && !s.Value.StartsWith(ProtectedPrefix))
+            .ToListAsync(ct);
+        foreach (var setting in plain) setting.Value = _protector.Protect(setting.Value!);
+
+        if (plain.Count > 0)
+        {
+            await db.SaveChangesAsync(ct);
+            cache.Remove(CacheKey);
+        }
+
+        return plain.Count;
+    }
+
     private async Task<IReadOnlyDictionary<string, string?>> GetPlainValuesAsync(CancellationToken ct)
     {
         if (cache.TryGetValue(CacheKey, out IReadOnlyDictionary<string, string?>? cached) && cached is not null)

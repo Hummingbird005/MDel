@@ -146,7 +146,7 @@ public sealed class ExchangePowerShellService(ISettingsService settings, ILogger
             throw new InvalidOperationException("Exchange is not configured: set the PowerShell URI in Administration.");
         }
 
-        var user = await settings.GetAsync(SettingKeys.ExchangeServiceUser, ct);
+        var user = await settings.GetSecretAsync(SettingKeys.ExchangeServiceUser, ct); // utilizator criptat în baza de date
         PSCredential? credential = null;
         if (!string.IsNullOrWhiteSpace(user))
         {
