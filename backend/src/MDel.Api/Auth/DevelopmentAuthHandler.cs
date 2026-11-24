@@ -7,7 +7,8 @@ namespace MDel.Api.Auth;
 
 /// <summary>
 /// Autentificare DOAR pentru dezvoltare (fără domeniu AD): autentifică fiecare cerere
-/// ca utilizatorul din "Authentication:Development". Poate fi suprascris cu headerele X-Dev-User / X-Dev-Groups.
+/// ca utilizatorul din "Authentication:Development". Poate fi suprascris cu headerele X-Dev-User / X-Dev-Groups
+/// sau, din browser, cu /api/dev/login-as?user=CORP\\ion.popescu&amp;groups=CORP\\MDel-Approvers (cookie).
 /// Este refuzată la pornire în afara mediului Development.
 /// </summary>
 public sealed class DevelopmentAuthHandler(
@@ -18,13 +19,20 @@ public sealed class DevelopmentAuthHandler(
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string SchemeName = "Development";
+    public const string UserCookie = "mdel-dev-user";
+    public const string GroupsCookie = "mdel-dev-groups";
+
+    private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var section = configuration.GetSection("Authentication:Development");
-        var user = Request.Headers["X-Dev-User"].FirstOrDefault() ?? section["User"] ?? "CONTOSO\\dev.admin";
+        // Ordinea: header (teste) → cookie (/api/dev/login-as, din browser) → appsettings.
+        var user = Request.Headers["X-Dev-User"].FirstOrDefault()
+                   ?? NonEmpty(Request.Cookies[UserCookie])
+                   ?? section["User"] ?? "CONTOSO\\dev.admin";
         // X-Dev-Groups: listă separată prin virgulă; "none" = fără grupuri (testare utilizator fără rol).
-        var groupsHeader = Request.Headers["X-Dev-Groups"].FirstOrDefault();
+        var groupsHeader = Request.Headers["X-Dev-Groups"].FirstOrDefault() ?? NonEmpty(Request.Cookies[GroupsCookie]);
         var groups = groupsHeader is null
             ? section.GetSection("Groups").Get<string[]>() ?? []
             : groupsHeader.Equals("none", StringComparison.OrdinalIgnoreCase)

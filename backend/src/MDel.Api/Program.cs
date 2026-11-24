@@ -148,6 +148,30 @@ app.MapGet("/api/health/ready", async (MDel.Infrastructure.Persistence.MDelDbCon
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 }).AllowAnonymous();
+if (authMode.Equals(DevelopmentAuthHandler.SchemeName, StringComparison.OrdinalIgnoreCase))
+{
+    // Doar Development: schimbă utilizatorul simulat din browser (ex. ca să aprobi cu alt cont).
+    // /api/dev/login-as?user=CORP\ion.popescu&groups=CORP\MDel-Approvers  (groups=none = fără grupuri)
+    // /api/dev/login-as  (fără parametri) = revine la utilizatorul din appsettings.Development.json
+    app.MapGet("/api/dev/login-as", (string? user, string? groups, HttpContext http) =>
+    {
+        var cookie = new CookieOptions { HttpOnly = true, SameSite = SameSiteMode.Lax, Path = "/" };
+        if (string.IsNullOrWhiteSpace(user))
+        {
+            http.Response.Cookies.Delete(DevelopmentAuthHandler.UserCookie, cookie);
+            http.Response.Cookies.Delete(DevelopmentAuthHandler.GroupsCookie, cookie);
+        }
+        else
+        {
+            http.Response.Cookies.Append(DevelopmentAuthHandler.UserCookie, user.Trim(), cookie);
+            if (string.IsNullOrWhiteSpace(groups)) http.Response.Cookies.Delete(DevelopmentAuthHandler.GroupsCookie, cookie);
+            else http.Response.Cookies.Append(DevelopmentAuthHandler.GroupsCookie, groups.Trim(), cookie);
+        }
+
+        return Results.Redirect("/");
+    }).AllowAnonymous();
+}
+
 app.MapControllers();
 // Rutele necunoscute din afara /api servesc SPA-ul (routing client-side).
 // Doar căile fără extensie (rute React); un fișier static lipsă rămâne 404, nu index.html.
