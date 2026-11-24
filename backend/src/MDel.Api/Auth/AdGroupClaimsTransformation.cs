@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MDel.Api.Setup;
 using MDel.Application.Abstractions;
 using MDel.Application.Common;
 using MDel.Domain;
@@ -10,7 +11,8 @@ namespace MDel.Api.Auth;
 
 /// <summary>
 /// Mapează grupurile AD pe rolurile aplicației (Admin / Approver) conform setărilor
-/// Groups.Admins / Groups.Approvers din ecranul de administrare și asigură existența
+/// Groups.Admins / Groups.Approvers din ecranul de administrare (plus conturile din
+/// Setup:InitialAdmins, care sunt mereu administratori) și asigură existența
 /// utilizatorului în AppUsers. Rezultatul se cache-uiește 5 minute per utilizator.
 /// </summary>
 public sealed class AdGroupClaimsTransformation(
@@ -55,7 +57,8 @@ public sealed class AdGroupClaimsTransformation(
     private async Task<CachedPrincipal> BuildAsync(ClaimsPrincipal principal, string loginName)
     {
         var roles = new List<string>();
-        if (await IsMemberAsync(principal, SettingKeys.GroupAdmins, "Authentication:Groups:Admins"))
+        var initialAdmin = InitialAdmins.Contains(configuration, loginName);
+        if (initialAdmin || await IsMemberAsync(principal, SettingKeys.GroupAdmins, "Authentication:Groups:Admins"))
             roles.Add(AppRoles.Admin);
         if (await IsMemberAsync(principal, SettingKeys.GroupApprovers, "Authentication:Groups:Approvers"))
             roles.Add(AppRoles.Approver);
@@ -67,7 +70,7 @@ public sealed class AdGroupClaimsTransformation(
         // Prima cerere dintr-o fereastră de 5 minute = „sesiune”; o auditam ca login.
         var audit = scope.ServiceProvider.GetRequiredService<IAuditService>();
         await audit.WriteAsync(new AuditEntry(AuditActions.Login, "AppUser", user.Id.ToString(),
-            NewValues: new { roles }, UserIdOverride: user.Id, UserNameOverride: loginName));
+            NewValues: initialAdmin ? new { roles, initialAdmin } : (object)new { roles }, UserIdOverride: user.Id, UserNameOverride: loginName));
 
         return new CachedPrincipal(user.Id, roles);
     }

@@ -14,9 +14,10 @@ echo "==> Frontend"
 (cd "$ROOT/frontend" && npm ci --no-audit --no-fund && npm run build)
 
 echo "==> Backend"
+# RestoreConfigFile: efbundle se compilează într-un folder temporar; așa folosește tot offline/nuget.
 (cd "$ROOT/backend" && dotnet tool restore && \
   dotnet publish src/MDel.Api/MDel.Api.csproj -c Release -r win-x64 --self-contained false -o "$OUT/MDel" && \
-  dotnet ef migrations bundle -p src/MDel.Infrastructure -s src/MDel.Api --configuration Release -r win-x64 --self-contained -o "$OUT/efbundle.exe" --force && \
+  RestoreConfigFile="$ROOT/backend/NuGet.config" dotnet ef migrations bundle -p src/MDel.Infrastructure -s src/MDel.Api --configuration Release -r win-x64 --self-contained -o "$OUT/efbundle.exe" --force && \
   dotnet ef migrations script --idempotent -p src/MDel.Infrastructure -s src/MDel.Api -o "$OUT/mdel-migrations.sql")
 
 echo "==> SPA în wwwroot"

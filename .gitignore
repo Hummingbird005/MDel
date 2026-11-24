@@ -23,4 +23,7 @@ frontend/playwright-report/
 # Pachet de instalare
 out/
 
-backend/NuGet.config
+
+# Logurile npm (frontend/.npmrc pune cache-ul în offline/npm-cache)
+offline/npm-cache/_logs/
+offline/npm-cache/_update-notifier-last-checked

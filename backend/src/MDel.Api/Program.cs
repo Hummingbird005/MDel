@@ -1,5 +1,6 @@
 using MDel.Api.Auth;
 using MDel.Api.Middleware;
+using MDel.Api.Setup;
 using MDel.Application.Abstractions;
 using MDel.Application.Common;
 using MDel.Infrastructure;
@@ -89,11 +90,8 @@ builder.Services.Configure<RequestLocalizationOptions>(o =>
 
 var app = builder.Build();
 
-if (useInMemoryDb)
-{
-    using var scope = app.Services.CreateScope();
-    scope.ServiceProvider.GetRequiredService<MDel.Infrastructure.Persistence.MDelDbContext>().Database.EnsureCreated();
-}
+// Prima pornire: creează baza de date în SQL Server și aplică migrările; apoi setările inițiale (Setup:*).
+await app.InitializeAsync();
 
 // ---------------------------------------------------------------- Pipeline
 app.UseExceptionHandler();
