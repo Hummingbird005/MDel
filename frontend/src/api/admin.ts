@@ -10,9 +10,24 @@ export interface SettingView {
   updatedBy: string | null
 }
 
+/** Secțiunea ActiveDirectory din appsettings.json, când e activată (are prioritate față de Setări). */
+export interface AdConfigView {
+  server: string | null
+  port: number
+  useSsl: boolean
+  validateCertificate: boolean
+  authType: string
+  bindUser: string | null
+  hasBindPassword: boolean
+  searchBases: string[]
+  domain: string | null
+  error: string | null
+}
+
 export interface SettingsResponse {
   settings: SettingView[]
   maxAttachmentMb: number
+  activeDirectory: AdConfigView | null
 }
 
 export interface ConnectionTestResult {

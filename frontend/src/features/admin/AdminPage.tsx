@@ -3,7 +3,7 @@ import { Mail, PlugZap, RotateCcw, Search, Trash2, UserPlus, Users } from 'lucid
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { adminApi, type ConnectionTestResult, type MailboxForwarding, type OutboxFilter, type SettingView, type TestTarget } from '../../api/admin'
+import { adminApi, type AdConfigView, type ConnectionTestResult, type MailboxForwarding, type OutboxFilter, type SettingView, type TestTarget } from '../../api/admin'
 import { ApiError } from '../../api/client'
 import { PageHeader } from '../../components/layout/AppShell'
 import type { PickedUser } from '../../components/pickedUser'
@@ -83,7 +83,11 @@ export function AdminPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
           <div className="xl:col-span-3">
-            <SettingsForm key={tab} settings={query.data.settings.filter((s) => s.category === tab)} maxAttachmentMb={query.data.maxAttachmentMb} />
+            {tab === 'ActiveDirectory' && query.data.activeDirectory ? (
+              <AdFromAppSettings config={query.data.activeDirectory} />
+            ) : (
+              <SettingsForm key={tab} settings={query.data.settings.filter((s) => s.category === tab)} maxAttachmentMb={query.data.maxAttachmentMb} />
+            )}
           </div>
           {current.test && (
             <div className="xl:col-span-2">
@@ -217,6 +221,38 @@ function SettingsForm({ settings, maxAttachmentMb }: { settings: SettingView[]; 
   )
 }
 
+/** Conexiunea AD vine din appsettings.json (ActiveDirectory:Enabled = true): doar afișare. */
+function AdFromAppSettings({ config }: { config: AdConfigView }) {
+  const { t } = useTranslation()
+  const rows: [string, string][] = [
+    [t('admin.adFile.server'), config.server ? `${config.server}:${config.port}` : '–'],
+    [t('admin.adFile.ssl'), config.useSsl ? (config.validateCertificate ? t('admin.yes') : t('admin.adFile.sslNoValidation')) : t('admin.no')],
+    [t('admin.adFile.authType'), config.authType || '–'],
+    [t('admin.adFile.bindUser'), config.bindUser ?? t('admin.adFile.appPool')],
+    [t('admin.adFile.password'), config.hasBindPassword ? t('admin.adFile.passwordSet') : t('admin.adFile.passwordNotSet')],
+    [t('admin.adFile.searchBases'), config.searchBases.length ? config.searchBases.join('\n') : t('admin.adFile.wholeDomain')],
+  ]
+  if (config.domain) rows.push([t('admin.adFile.domain'), config.domain])
+
+  return (
+    <Card>
+      <CardHeader title={t('admin.categories.ActiveDirectory')} />
+      <div className="flex flex-col gap-4 p-5">
+        <Alert>{t('admin.adFile.info')}</Alert>
+        {config.error && <Alert tone="danger">{config.error}</Alert>}
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-[max-content_1fr]">
+          {rows.map(([label, value]) => (
+            <div key={label} className="contents">
+              <dt className="text-muted">{label}</dt>
+              <dd className="whitespace-pre-line break-all font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </Card>
+  )
+}
+
 function ConnectionTest({ target }: { target: TestTarget }) {
   const { t } = useTranslation()
   const [sendTo, setSendTo] = useState('')
@@ -239,7 +275,11 @@ function ConnectionTest({ target }: { target: TestTarget }) {
         <Button variant="secondary" className="w-fit" loading={test.isPending} onClick={() => test.mutate()}>
           <PlugZap size={15} /> {test.isPending ? t('admin.testing') : t('admin.test')}
         </Button>
-        {test.data && <Alert tone={test.data.success ? 'success' : 'danger'}>{test.data.message}</Alert>}
+        {test.data && (
+          <Alert tone={test.data.success ? 'success' : 'danger'} className="whitespace-pre-line break-words">
+            {test.data.message}
+          </Alert>
+        )}
         {test.error && <Alert tone="danger">{(test.error as Error).message}</Alert>}
 
         {target === 'exchange' && (

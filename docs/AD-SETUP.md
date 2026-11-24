@@ -8,47 +8,77 @@ Exemplele folosesc domeniul `contoso.local` (NetBIOS `CONTOSO`) și adresa aplic
 
 ## Varianta rapidă: totul din `appsettings.json` (fără PowerShell)
 
-Dacă nu puteți rula scripturi PowerShell în AD, AD-ul și administratorul se configurează direct în
-`appsettings.json` din folderul aplicației (ex. `C:\inetpub\MDel\appsettings.json`), înainte de prima pornire:
+Dacă nu puteți rula scripturi PowerShell în AD, conexiunea la AD și administratorul se configurează direct în
+`appsettings.json` din folderul aplicației (ex. `C:\inetpub\MDel\appsettings.json`), înainte de prima pornire.
+
+### 1. Conexiunea la AD: secțiunea `ActiveDirectory`
+
+```json
+"ActiveDirectory": {
+  "Enabled": true,
+  "Server": "dc01.corp.local",
+  "Port": 636,
+  "UseSsl": true,
+  "ValidateCertificate": true,
+  "BindUser": "CN=svc-mdel,OU=Servicii,DC=corp,DC=local",
+  "BindPassword": "parola-contului",
+  "AuthType": null,
+  "SearchBases": [
+    "OU=Angajati,DC=corp,DC=local",
+    "OU=Externi,DC=corp,DC=local"
+  ],
+  "Domain": "corp.local",
+  "TimeoutSeconds": 15
+}
+```
+
+| Cheie | Ce face |
+|---|---|
+| `Enabled` | `true` = conexiunea se ia **din acest fișier** și are prioritate față de ecranul Setări (tab-ul Active Directory devine doar informativ). `false` = se folosește ecranul Setări. |
+| `Server` | controlerul de domeniu (`dc01.corp.local`) sau numele domeniului (DC găsit prin DNS). Acceptă și `ldaps://dc01.corp.local`. |
+| `Port` | `636` pentru LDAPS, `389` fără SSL. Gol = ales după `UseSsl`. |
+| `UseSsl` | LDAPS. Certificatul DC-ului trebuie să fie de încredere pe serverul aplicației, iar numele din `Server` să fie cel din certificat. |
+| `ValidateCertificate` | `false` doar pentru teste (certificat self-signed): acceptă orice certificat. |
+| `BindUser` | contul cu care se citește din AD, în una din formele `CN=svc-mdel,OU=…,DC=corp,DC=local` (DN), `svc-mdel@corp.local` sau `CORP\\svc-mdel`. Orice cont de domeniu obișnuit, fără drepturi speciale. `null` = identitatea app pool-ului. |
+| `BindPassword` | parola contului (în fișier, text clar: restricționați accesul la folder). |
+| `AuthType` | `null` = automat: DN → `Basic` (simple bind, **doar cu SSL**), celelalte → `Negotiate` (Kerberos/NTLM). Se poate forța `Basic` sau `Negotiate`. |
+| `SearchBases` | OU-urile în care se caută utilizatorii (oricâte). Gol `[]` = tot domeniul. Conturile dezactivate nu apar. |
+| `Domain` | domeniul DNS, pentru un `BindUser` fără domeniu. Opțional. |
+
+Verificare: **Setări → Active Directory → Testează conexiunea** arată sursa (appsettings.json), serverul, portul, tipul de
+autentificare și fiecare OU (OK / inexistent). La eroare spune cauza: parolă greșită, cont blocat/dezactivat/expirat,
+server sau port inaccesibil, certificat neacceptat, SSL necesar.
+
+### 2. Administratorul și grupurile: secțiunea `Setup`
 
 ```json
 "Setup": {
   "MigrateDatabaseOnStartup": true,
-  "InitialAdmins": [ "CONTOSO\\ion.popescu" ],
+  "InitialAdmins": [ "CORP\\ion.popescu" ],
   "OverwriteSettingsOnStartup": true,
   "InitialSettings": {
-    "Ad.Domain": "contoso.local",
-    "Ad.LdapServer": "dc01.contoso.local",
-    "Ad.BaseDn": "DC=contoso,DC=local",
-    "Ad.ServiceUser": "CONTOSO\\svc-mdel",
-    "Ad.ServicePassword": "parola-contului",
-    "Groups.Admins": "CONTOSO\\MDel-Admins",
-    "Groups.AdminsEmail": "mdel-admins@contoso.local",
-    "Groups.Approvers": "CONTOSO\\MDel-Approvers",
-    "Groups.ApproversEmail": "mdel-approvers@contoso.local",
-    "General.BaseUrl": "https://mdel.contoso.local"
+    "Groups.Admins": "CORP\\MDel-Admins",
+    "Groups.AdminsEmail": "mdel-admins@corp.local",
+    "Groups.Approvers": "CORP\\MDel-Approvers",
+    "Groups.ApproversEmail": "mdel-approvers@corp.local",
+    "General.BaseUrl": "https://mdel.corp.local"
   }
 }
 ```
 
-În JSON, backslash-ul se scrie dublat (`CONTOSO\\ion.popescu`).
+În JSON, backslash-ul se scrie dublat (`CORP\\ion.popescu`).
 
 - **`InitialAdmins`**: utilizatorul (sau utilizatorii) care e **Admin** în aplicație, indiferent de grupuri. Intră cu
   contul Windows și parola lui din AD. Poate rămâne în fișier cât timp e nevoie.
-- **`Ad.ServiceUser` / `Ad.ServicePassword`**: un cont de domeniu obișnuit, fără drepturi speciale (orice utilizator
-  autentificat poate citi din AD), cu care aplicația caută utilizatorii. Gol = se folosește identitatea app pool-ului.
-  Parola se salvează **criptată** în bază la pornire.
-- **`OverwriteSettingsOnStartup: true`**: valorile din fișier se aplică la **fiecare pornire**, deci o greșeală se
-  corectează tot din fișier (modificați, reporniți app pool-ul). Cu `false` (implicit), fișierul completează doar
-  câmpurile goale, iar de acolo înainte setările se schimbă din ecranul Setări.
+- **`OverwriteSettingsOnStartup: true`**: valorile din `InitialSettings` se aplică la **fiecare pornire**, deci o
+  greșeală se corectează tot din fișier (modificați, reporniți app pool-ul). Cu `false` (implicit), fișierul completează
+  doar câmpurile goale, iar de acolo înainte setările se schimbă din ecranul Setări.
 - **Grupurile** pot fi orice grupuri de securitate existente în AD (create de echipa AD, de ex. din
   *Active Directory Users and Computers*). Pot rămâne goale la început: aplicația funcționează cu adminul din
   `InitialAdmins`; fără grup de aprobatori folosiți delegările **Fără aprobare**.
 
 După ce ați salvat fișierul: porniți app pool-ul. Baza se creează singură (pasul 5 pentru drepturile SQL), apoi
-deschideți aplicația cu contul din `InitialAdmins` și verificați în **Setări → Active Directory → Testează conexiunea**.
-Recomandare: după ce totul funcționează, ștergeți parola din fișier (rămâne salvată criptat în bază) sau lăsați
-`OverwriteSettingsOnStartup` pe `false`.
+deschideți aplicația cu contul din `InitialAdmins` și rulați **Setări → Active Directory → Testează conexiunea**.
 
 **Fără SPN-uri** (pasul 3), autentificarea Windows funcționează prin NTLM; Kerberos e de preferat, dar nu e obligatoriu.
 
@@ -235,4 +265,8 @@ Se pot pune și alte setări (cheile din Setări, ex. `Exchange.PowerShellUri`, 
 | App pool-ul se oprește la pornire (HTTP 500.30) | baza nu poate fi creată: connection string sau drepturi SQL (pasul 5); detaliile apar în Event Viewer |
 | `Setup:InitialSettings contains invalid values` | o valoare invalidă (ex. email greșit): corectați-o în `appsettings.json` |
 | Adminul inițial intră, dar fără nume/email | AD nu e încă accesibil sau configurat: se completează la prima conectare după ce testul AD trece |
+| Test AD: „wrong user name or password” | `BindUser` / `BindPassword` greșite (pentru DN: verificați exact CN-ul și OU-ul contului) |
+| Test AD: „cannot reach … over SSL” | port 636 blocat, certificatul DC-ului nu e de încredere pe serverul aplicației sau `Server` nu e numele din certificat |
+| Test AD: „requires SSL” / „Basic … clear text” | simple bind cu DN merge doar cu `UseSsl: true` (port 636); fără SSL folosiți `CORP\\cont` |
+| Test AD: „Search base …: NoSuchObject” | OU-ul din `SearchBases` nu există sau e scris greșit |
 | Un membru nou al grupului nu are drepturi | trebuie să se deconecteze/reconecteze în Windows (grupurile sunt în tichetul Kerberos); în aplicație rolurile se reîmprospătează în max. 5 minute |
