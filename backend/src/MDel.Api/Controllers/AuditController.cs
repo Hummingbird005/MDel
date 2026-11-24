@@ -9,7 +9,7 @@ namespace MDel.Api.Controllers;
 
 /// <summary>Ecranul „Istoric / Audit”: toate acțiunile utilizatorilor și ale sistemului.</summary>
 [ApiController]
-[Authorize(Policy = AppRoles.Admin)]
+[Authorize(Policy = AppRoles.SystemAdmin)]
 [Route("api/audit")]
 public sealed class AuditController(AuditQueryService audit) : ControllerBase
 {

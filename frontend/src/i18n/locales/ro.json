@@ -21,9 +21,10 @@
     "en": "English"
   },
   "roles": {
-    "Admin": "Administrator",
+    "Admin": "Administrator delegări",
     "Approver": "Aprobator",
-    "none": "Fără rol"
+    "none": "Fără rol",
+    "SystemAdmin": "Administrator sistem"
   },
   "dashboard": {
     "active": "Active",
@@ -110,7 +111,8 @@
       "Retention_AuditDays": "Retenție audit (zile)",
       "General_DefaultLanguage": "Limbă implicită",
       "General_PreventSelfApproval": "Interzice aprobarea propriei cereri",
-      "General_BaseUrl": "Adresa aplicației"
+      "General_BaseUrl": "Adresa aplicației",
+      "Groups_SystemAdmins": "Grup AD administratori de sistem"
     },
     "help": {
       "Ad_Domain": "Ex.: contoso.local",
@@ -133,7 +135,8 @@
       "Retention_AttachmentsDays": "Implicit 365. Fișierele mai vechi sunt șterse automat.",
       "Retention_AuditDays": "Implicit 365. Înregistrările mai vechi sunt șterse automat.",
       "General_DefaultLanguage": "Pentru utilizatorii fără preferință salvată și pentru emailuri.",
-      "General_BaseUrl": "Ex.: https://mdel.contoso.local – folosită pentru link-urile din emailuri."
+      "General_BaseUrl": "Ex.: https://mdel.contoso.local – folosită pentru link-urile din emailuri.",
+      "Groups_SystemAdmins": "Ex.: CONTOSO\\\\MDel-System. Au acces la Setări și Istoric / Audit. Cât timp e gol, contul din Setup:InitialAdmins (appsettings.json) are acest rol; după completare, rolul vine doar din grup – adăugați-vă în grup înainte de a salva."
     },
     "subtitle": "Conexiuni AD, Exchange și SMTP, grupuri, fișiere și retenție",
     "informMembers_one": "Grup de informare · {{count}} membru",

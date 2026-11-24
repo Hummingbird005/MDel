@@ -13,7 +13,7 @@ namespace MDel.Api.Controllers;
 
 /// <summary>Ecranul de administrare: setări (AD, Exchange, SMTP, fișiere, retenție…) și teste de conexiune.</summary>
 [ApiController]
-[Authorize(Policy = AppRoles.Admin)]
+[Authorize(Policy = AppRoles.SystemAdmin)]
 [Route("api/admin")]
 public sealed class AdminController(
     ISettingsService settings,

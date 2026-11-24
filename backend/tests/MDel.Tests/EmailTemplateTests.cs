@@ -17,7 +17,7 @@ public sealed class EmailTemplateTests : IDisposable
     private HttpClient Admin()
     {
         var c = _factory.CreateClient();
-        c.DefaultRequestHeaders.Add("X-Dev-Groups", "CONTOSO\\MDel-Admins");
+        c.DefaultRequestHeaders.Add("X-Dev-Groups", "CONTOSO\\MDel-Admins,CONTOSO\\MDel-System");
         return c;
     }
 

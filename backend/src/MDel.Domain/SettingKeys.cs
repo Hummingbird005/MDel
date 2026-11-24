@@ -13,6 +13,7 @@ public static class SettingKeys
     // Grupuri AD mapate pe roluri
     public const string GroupAdmins = "Groups.Admins";
     public const string GroupApprovers = "Groups.Approvers";
+    public const string GroupSystemAdmins = "Groups.SystemAdmins";
     public const string GroupAdminsEmail = "Groups.AdminsEmail";
     public const string GroupApproversEmail = "Groups.ApproversEmail";
 

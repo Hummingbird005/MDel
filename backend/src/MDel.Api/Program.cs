@@ -14,6 +14,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Doar Development: setări locale ale dezvoltatorului, în afara git (parole, contul propriu, grupuri).
+// Suprascriu appsettings.Development.json; fișierul e ignorat de git.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+}
+
 // ---------------------------------------------------------------- Limite upload
 // Atașamente de max. 100 MB (configurabil din administrare); limita tehnică a serverului
 // trebuie să fie >= setarea din aplicație. Pe IIS se setează și maxAllowedContentLength (web.config).
@@ -75,6 +82,8 @@ builder.Services.AddTransient<IClaimsTransformation, AdGroupClaimsTransformation
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AppRoles.Admin, p => p.RequireRole(AppRoles.Admin))
     .AddPolicy(AppRoles.Approver, p => p.RequireRole(AppRoles.Approver))
+    .AddPolicy(AppRoles.SystemAdmin, p => p.RequireRole(AppRoles.SystemAdmin))
+    .AddPolicy(AppPolicies.DirectorySearch, p => p.RequireRole(AppRoles.Admin, AppRoles.SystemAdmin))
     .AddPolicy(AppPolicies.Viewer, p => p.RequireRole(AppRoles.Admin, AppRoles.Approver))
     .SetFallbackPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser().Build());

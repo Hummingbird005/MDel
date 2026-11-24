@@ -7,7 +7,7 @@ namespace MDel.Api.Controllers;
 
 /// <summary>Căutare utilizatori în AD (autocomplete pentru „De la”, „Către”, grupul de informare).</summary>
 [ApiController]
-[Authorize(Policy = AppRoles.Admin)]
+[Authorize(Policy = AppPolicies.DirectorySearch)]
 [Route("api/directory")]
 public sealed class DirectoryController(IDirectoryService directory, ILogger<DirectoryController> logger) : ControllerBase
 {

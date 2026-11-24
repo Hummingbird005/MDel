@@ -20,6 +20,7 @@ internal static class DefaultSettings
 
         S(SettingKeys.GroupAdmins, "", "Groups"),
         S(SettingKeys.GroupApprovers, "", "Groups"),
+        S(SettingKeys.GroupSystemAdmins, "", "Groups"),
         S(SettingKeys.GroupAdminsEmail, "", "Groups"),
         S(SettingKeys.GroupApproversEmail, "", "Groups"),
 

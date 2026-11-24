@@ -21,9 +21,10 @@
     "en": "English"
   },
   "roles": {
-    "Admin": "Administrator",
+    "Admin": "Delegation administrator",
     "Approver": "Approver",
-    "none": "No role"
+    "none": "No role",
+    "SystemAdmin": "System administrator"
   },
   "dashboard": {
     "active": "Active",
@@ -110,7 +111,8 @@
       "Retention_AuditDays": "Audit retention (days)",
       "General_DefaultLanguage": "Default language",
       "General_PreventSelfApproval": "Prevent approving your own request",
-      "General_BaseUrl": "Application address"
+      "General_BaseUrl": "Application address",
+      "Groups_SystemAdmins": "AD group: system administrators"
     },
     "help": {
       "Ad_Domain": "E.g. contoso.local",
@@ -133,7 +135,8 @@
       "Retention_AttachmentsDays": "Default 365. Older files are deleted automatically.",
       "Retention_AuditDays": "Default 365. Older entries are deleted automatically.",
       "General_DefaultLanguage": "For users without a saved preference and for emails.",
-      "General_BaseUrl": "E.g. https://mdel.contoso.local – used for links in emails."
+      "General_BaseUrl": "E.g. https://mdel.contoso.local – used for links in emails.",
+      "Groups_SystemAdmins": "E.g. CONTOSO\\\\MDel-System. Members can open Settings and History / Audit. While empty, the account in Setup:InitialAdmins (appsettings.json) holds this role; once it is set the role comes only from the group – add yourself to the group before saving."
     },
     "subtitle": "AD, Exchange and SMTP connections, groups, files and retention",
     "informMembers_one": "Inform group · {{count}} member",

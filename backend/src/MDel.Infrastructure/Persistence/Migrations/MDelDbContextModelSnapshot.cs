@@ -115,6 +115,14 @@ namespace MDel.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            Key = "Groups.SystemAdmins",
+                            Category = "Groups",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
                             Key = "Groups.AdminsEmail",
                             Category = "Groups",
                             IsSecret = false,

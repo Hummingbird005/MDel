@@ -19,7 +19,13 @@ public class SetupTests
 {
     private sealed record MeDto(string SamAccountName, string DisplayName, string[] Roles);
 
-    private sealed class SetupFactory(
+    /// <summary>Fără grupuri configurate nicăieri (nici în appsettings.Development.json): rolurile vin doar din adminul inițial.</summary>
+    internal static readonly (string Key, string Value)[] NoConfiguredGroups =
+    [
+        ("Authentication:Groups:Admins", ""), ("Authentication:Groups:Approvers", ""), ("Authentication:Groups:SystemAdmins", ""),
+    ];
+
+    internal sealed class SetupFactory(
         InMemoryDatabaseRoot root,
         string dbName,
         IReadOnlyDictionary<string, string> config,
@@ -147,15 +153,15 @@ public class SetupTests
     [InlineData("boot.admin")]
     public async Task Initial_admin_is_administrator_without_any_ad_group(string configured)
     {
-        var config = new Dictionary<string, string> { ["Setup:InitialAdmins:0"] = configured };
+        var config = NoConfiguredGroups.ToDictionary(g => g.Key, g => g.Value);
+        config["Setup:InitialAdmins:0"] = configured;
         await using var factory = new SetupFactory(new InMemoryDatabaseRoot(), Guid.NewGuid().ToString(), config);
 
         var admin = factory.CreateClient();
         admin.DefaultRequestHeaders.Add("X-Dev-User", "CONTOSO\\boot.admin");
         admin.DefaultRequestHeaders.Add("X-Dev-Groups", "none");
         var me = await admin.GetFromJsonAsync<MeDto>("/api/me");
-        Assert.Contains(AppRoles.Admin, me!.Roles);
-        Assert.DoesNotContain(AppRoles.Approver, me.Roles);
+        Assert.Equal(AppRoles.All.Order(), me!.Roles.Order()); // toate rolurile, cât timp nu e configurat niciun grup
 
         var settings = await admin.GetAsync("/api/admin/settings");
         Assert.True(settings.IsSuccessStatusCode);
@@ -171,9 +177,9 @@ public class SetupTests
     [Fact]
     public async Task Login_works_while_ad_is_not_configured_yet()
     {
-        await using var factory = new SetupFactory(new InMemoryDatabaseRoot(), Guid.NewGuid().ToString(),
-            new Dictionary<string, string> { ["Setup:InitialAdmins:0"] = "CONTOSO\\boot.admin" },
-            new UnconfiguredDirectory());
+        var config = NoConfiguredGroups.ToDictionary(g => g.Key, g => g.Value);
+        config["Setup:InitialAdmins:0"] = "CONTOSO\\boot.admin";
+        await using var factory = new SetupFactory(new InMemoryDatabaseRoot(), Guid.NewGuid().ToString(), config, new UnconfiguredDirectory());
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Dev-User", "CONTOSO\\boot.admin");

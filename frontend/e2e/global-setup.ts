@@ -8,7 +8,7 @@ export default async function globalSetup() {
   const storage = fs.mkdtempSync(path.join(os.tmpdir(), 'mdel-e2e-'))
   const api = await request.newContext({
     baseURL: 'http://localhost:5080',
-    extraHTTPHeaders: { 'X-Dev-User': 'CONTOSO\\dev.admin', 'X-Dev-Groups': 'CONTOSO\\MDel-Admins' },
+    extraHTTPHeaders: { 'X-Dev-User': 'CONTOSO\\dev.admin', 'X-Dev-Groups': 'CONTOSO\\MDel-System' },
   })
   const response = await api.put('/api/admin/settings', {
     data: {

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { ADMIN, APPROVER, NO_ROLE } from './helpers'
+import { ADMIN, APPROVER, DELEGATION_ADMIN, NO_ROLE, SYSTEM_ADMIN } from './helpers'
 
 test('tema dark se păstrează după reîncărcare', async ({ browser }) => {
   const context = await browser.newContext({ extraHTTPHeaders: ADMIN, colorScheme: 'light' })
@@ -33,6 +33,27 @@ test('rolurile limitează accesul la pagini', async ({ browser }) => {
   const user = await (await browser.newContext({ extraHTTPHeaders: NO_ROLE })).newPage()
   await user.goto('/')
   await expect(user.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
+})
+
+test('administratorul de delegări nu vede Setări și Audit, administratorul de sistem nu vede delegările', async ({ browser }) => {
+  const delegations = await (await browser.newContext({ extraHTTPHeaders: DELEGATION_ADMIN })).newPage()
+  await delegations.goto('/delegations')
+  await expect(delegations.getByRole('link', { name: 'Delegări' })).toBeVisible()
+  await expect(delegations.getByRole('link', { name: 'Setări' })).toHaveCount(0)
+  await expect(delegations.getByRole('link', { name: /Audit/ })).toHaveCount(0)
+  await delegations.goto('/admin')
+  await expect(delegations.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
+  await delegations.goto('/audit')
+  await expect(delegations.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
+
+  const system = await (await browser.newContext({ extraHTTPHeaders: SYSTEM_ADMIN })).newPage()
+  await system.goto('/admin')
+  await expect(system.getByRole('tab', { name: 'Active Directory' })).toBeVisible()
+  await expect(system.getByRole('link', { name: 'Setări' })).toBeVisible()
+  await expect(system.getByRole('link', { name: /Audit/ })).toBeVisible()
+  await expect(system.getByRole('link', { name: 'Delegări' })).toHaveCount(0)
+  await system.goto('/delegations')
+  await expect(system.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
 })
 
 test('auditul arată acțiunile și detaliul cu valori vechi/noi', async ({ browser, request }) => {

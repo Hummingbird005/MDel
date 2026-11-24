@@ -51,8 +51,8 @@ export default function App() {
           <Route path="delegations" element={<RequireRole user={user} roles={viewer}><DelegationsPage /></RequireRole>} />
           <Route path="delegations/:id" element={<RequireRole user={user} roles={viewer}><DelegationDetailPage /></RequireRole>} />
           <Route path="approvals" element={<RequireRole user={user} roles={['Approver']}><ApprovalsPage /></RequireRole>} />
-          <Route path="audit" element={<RequireRole user={user} roles={['Admin']}><AuditPage /></RequireRole>} />
-          <Route path="admin" element={<RequireRole user={user} roles={['Admin']}><AdminPage /></RequireRole>} />
+          <Route path="audit" element={<RequireRole user={user} roles={['SystemAdmin']}><AuditPage /></RequireRole>} />
+          <Route path="admin" element={<RequireRole user={user} roles={['SystemAdmin']}><AdminPage /></RequireRole>} />
           <Route path="*" element={<Alert>{t('common.notFound')}</Alert>} />
         </Route>
       </Routes>

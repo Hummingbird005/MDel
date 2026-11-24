@@ -10,9 +10,9 @@ using Microsoft.Extensions.Caching.Memory;
 namespace MDel.Api.Auth;
 
 /// <summary>
-/// Mapează grupurile AD pe rolurile aplicației (Admin / Approver) conform setărilor
-/// Groups.Admins / Groups.Approvers din ecranul de administrare (plus conturile din
-/// Setup:InitialAdmins, care sunt mereu administratori) și asigură existența
+/// Mapează grupurile AD pe rolurile aplicației (Admin / Approver / SystemAdmin) conform setărilor
+/// Groups.* din ecranul Setări. Conturile din Setup:InitialAdmins primesc fiecare rol cât timp grupul
+/// acelui rol nu e configurat (nici în Setări, nici în appsettings.json). Asigură și existența
 /// utilizatorului în AppUsers. Rezultatul se cache-uiește 5 minute per utilizator.
 /// </summary>
 public sealed class AdGroupClaimsTransformation(
@@ -56,12 +56,27 @@ public sealed class AdGroupClaimsTransformation(
 
     private async Task<CachedPrincipal> BuildAsync(ClaimsPrincipal principal, string loginName)
     {
-        var roles = new List<string>();
         var initialAdmin = InitialAdmins.Contains(configuration, loginName);
-        if (initialAdmin || await IsMemberAsync(principal, SettingKeys.GroupAdmins, "Authentication:Groups:Admins"))
-            roles.Add(AppRoles.Admin);
-        if (await IsMemberAsync(principal, SettingKeys.GroupApprovers, "Authentication:Groups:Approvers"))
-            roles.Add(AppRoles.Approver);
+        var bootstrapRoles = new List<string>();
+        var roles = new List<string>();
+        foreach (var (role, settingKey, configKey) in RoleGroups)
+        {
+            var group = await GetGroupAsync(settingKey, configKey);
+            if (string.IsNullOrWhiteSpace(group))
+            {
+                // Rolul nu are încă un grup configurat: adminul inițial (appsettings) îl primește,
+                // ca să poată configura aplicația. Imediat ce grupul e completat, rolul vine doar din el.
+                if (initialAdmin)
+                {
+                    roles.Add(role);
+                    bootstrapRoles.Add(role);
+                }
+            }
+            else if (IsMember(principal, group))
+            {
+                roles.Add(role);
+            }
+        }
 
         using var scope = services.CreateScope();
         var provisioning = scope.ServiceProvider.GetRequiredService<UserProvisioningService>();
@@ -70,21 +85,28 @@ public sealed class AdGroupClaimsTransformation(
         // Prima cerere dintr-o fereastră de 5 minute = „sesiune”; o auditam ca login.
         var audit = scope.ServiceProvider.GetRequiredService<IAuditService>();
         await audit.WriteAsync(new AuditEntry(AuditActions.Login, "AppUser", user.Id.ToString(),
-            NewValues: initialAdmin ? new { roles, initialAdmin } : (object)new { roles }, UserIdOverride: user.Id, UserNameOverride: loginName));
+            NewValues: bootstrapRoles.Count > 0 ? new { roles, initialAdminRoles = bootstrapRoles } : new { roles },
+            UserIdOverride: user.Id, UserNameOverride: loginName));
 
         return new CachedPrincipal(user.Id, roles);
     }
 
-    /// <summary>
-    /// Grupul se ia din AppSettings (administrare) sau, dacă e gol, din appsettings.json
-    /// (bootstrap: primul admin trebuie să poată intra ca să configureze aplicația).
-    /// </summary>
-    private async Task<bool> IsMemberAsync(ClaimsPrincipal principal, string settingKey, string configKey)
+    /// <summary>Cele trei roluri și grupurile lor: din Setări sau, dacă sunt goale, din appsettings.json (Authentication:Groups).</summary>
+    private static readonly (string Role, string SettingKey, string ConfigKey)[] RoleGroups =
+    [
+        (AppRoles.Admin, SettingKeys.GroupAdmins, "Authentication:Groups:Admins"),
+        (AppRoles.Approver, SettingKeys.GroupApprovers, "Authentication:Groups:Approvers"),
+        (AppRoles.SystemAdmin, SettingKeys.GroupSystemAdmins, "Authentication:Groups:SystemAdmins"),
+    ];
+
+    private async Task<string?> GetGroupAsync(string settingKey, string configKey)
     {
         var group = await settings.GetAsync(settingKey);
-        if (string.IsNullOrWhiteSpace(group)) group = configuration[configKey];
-        if (string.IsNullOrWhiteSpace(group)) return false;
+        return string.IsNullOrWhiteSpace(group) ? configuration[configKey] : group;
+    }
 
+    private static bool IsMember(ClaimsPrincipal principal, string group)
+    {
         var shortName = group.Contains('\\') ? group[(group.IndexOf('\\') + 1)..] : group;
 
         // Windows/Negotiate: WindowsPrincipal.IsInRole rezolvă grupurile AD (inclusiv imbricate).
