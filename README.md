@@ -183,14 +183,15 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 - Producție: Windows Authentication (Negotiate/Kerberos) pe IIS – vezi `web.config`.
 - Rolurile `Admin` și `Approver` se obțin din grupurile AD configurate în `AppSettings`
   (`Groups.Admins`, `Groups.Approvers`).
-- **Prima pornire:** conturile din `Setup:InitialAdmins` (`appsettings.json`) sunt administratori indiferent de grupuri
-  (adminul inițial, se conectează tot cu Windows). `Setup:InitialSettings` completează setările goale (AD, grupuri,
-  adresa aplicației). Pregătirea AD: [docs/AD-SETUP.md](docs/AD-SETUP.md) și `scripts/New-MDelAdObjects.ps1`.
+- **Fără PowerShell:** conturile din `Setup:InitialAdmins` (`appsettings.json`) sunt administratori indiferent de
+  grupuri (se conectează cu Windows). `Setup:InitialSettings` configurează AD-ul (domeniu, server, cont și parolă de
+  citire – salvată criptat), grupurile și adresa aplicației; cu `Setup:OverwriteSettingsOnStartup = true` fișierul se
+  aplică la fiecare pornire. Detalii: [docs/AD-SETUP.md](docs/AD-SETUP.md) (opțional `scripts/New-MDelAdObjects.ps1`).
 
 ## Teste
 
 ```bash
-cd backend && dotnet test MDel.slnx          # 128 de teste: model EF, API, reguli, notificări, scheduler, audit
+cd backend && dotnet test MDel.slnx          # 129 de teste: model EF, API, reguli, notificări, scheduler, audit
 cd frontend && npm run lint && npm run build
 cd frontend && npm run e2e                   # Playwright: pornește backend-ul (in-memory) și Vite
 ```

@@ -1,8 +1,8 @@
 # MDel – ghid de instalare (IIS, Windows Server)
 
 Ghid pas cu pas pentru instalarea MDel pe un server IIS din domeniu, cu SQL Server și Exchange 2016 on-premise.
-**Înainte**: pregătirea AD (cont de serviciu, grupuri, SPN-uri, drepturi SQL, admin inițial) din
-[AD-SETUP.md](AD-SETUP.md). Bifați fiecare pas; la final rulați checklist-ul din [UAT.md](UAT.md).
+**Înainte**: pregătirea AD (cont de serviciu, grupuri, SPN-uri, drepturi SQL, admin) din
+[AD-SETUP.md](AD-SETUP.md) – fără PowerShell: secțiunea „Varianta rapidă”, totul în `appsettings.json`. Bifați fiecare pas; la final rulați checklist-ul din [UAT.md](UAT.md).
 
 ## 1. Ce vă trebuie
 
@@ -89,10 +89,10 @@ La fiecare versiune nouă, în acest caz: rulați din nou `efbundle.exe` înaint
 }
 ```
 
-- `Setup:InitialAdmins` – **adminul inițial**: administrator indiferent de grupurile AD, pentru prima conectare.
-  Scoateți-l după ce grupurile sunt configurate și verificate.
-- `Setup:InitialSettings` – setări (AD, grupuri, adresa aplicației…) copiate în Setări la prima pornire, doar dacă
-  sunt goale. Lista completă și exemplele: [AD-SETUP.md](AD-SETUP.md), pasul 7.
+- `Setup:InitialAdmins` – **adminul**: administrator indiferent de grupurile AD (conectare cu contul Windows).
+- `Setup:InitialSettings` – setări (AD inclusiv contul și parola de citire, grupuri, adresa aplicației…) copiate în
+  Setări la pornire: doar dacă sunt goale sau, cu `Setup:OverwriteSettingsOnStartup = true`, la fiecare pornire.
+  Lista completă și exemplele: [AD-SETUP.md](AD-SETUP.md).
 - `Authentication:Groups` – alternativă mai veche la `Groups.*` din `InitialSettings`: folosite doar cât timp
   grupurile din Setări sunt goale.
 - `DataProtection:KeysPath` – folderul cheilor care criptează parolele din Setări. Contul app pool-ului trebuie să aibă
@@ -114,8 +114,8 @@ La fiecare versiune nouă, în acest caz: rulați din nou `efbundle.exe` înaint
    6. **General** – adresa aplicației (pentru link-urile din emailuri), limba implicită.
    7. **Grup de informare** – utilizatorii care primesc toate notificările.
    8. **Șabloane email** (opțional) – adaptați textul mesajelor în română; verificați în previzualizare.
-3. Verificați că un membru al grupului de administratori intră ca administrator, apoi goliți `Setup:InitialAdmins`
-   și reporniți app pool-ul.
+3. Opțional, când grupul de administratori e configurat: verificați că un membru intră ca administrator, apoi
+   goliți `Setup:InitialAdmins` și reporniți app pool-ul.
 4. Rulați checklist-ul din [UAT.md](UAT.md).
 
 ## 8. Operare

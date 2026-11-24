@@ -50,6 +50,13 @@ public class SetupTests
             return await scope.ServiceProvider.GetRequiredService<MDelDbContext>().AppSettings
                 .Where(s => s.Key == key).Select(s => s.Value).SingleAsync();
         }
+
+        /// <summary>Numărul de modificări de setări din audit.</summary>
+        public int WithAudit()
+        {
+            using var scope = Services.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<MDelDbContext>().AuditLogs.Count(a => a.Action == "Settings.Updated");
+        }
     }
 
     [Fact]
@@ -80,6 +87,49 @@ public class SetupTests
         await using var second = new SetupFactory(root, dbName, config);
         second.CreateClient();
         Assert.Equal("corp.contoso.local", await second.SettingAsync(SettingKeys.AdDomain));
+    }
+
+    [Fact]
+    public async Task Settings_only_from_appsettings_overwrite_on_startup_and_encrypt_the_password()
+    {
+        var root = new InMemoryDatabaseRoot();
+        var dbName = Guid.NewGuid().ToString();
+        var config = new Dictionary<string, string>
+        {
+            ["Setup:OverwriteSettingsOnStartup"] = "true",
+            ["Setup:InitialSettings:Ad.Domain"] = "contoso.local",
+            ["Setup:InitialSettings:Ad.ServiceUser"] = "CONTOSO\\svc-mdel",
+            ["Setup:InitialSettings:Ad.ServicePassword"] = "P@rola-AD-1",
+        };
+
+        await using (var first = new SetupFactory(root, dbName, config))
+        {
+            first.CreateClient();
+            Assert.Equal("CONTOSO\\svc-mdel", await first.SettingAsync(SettingKeys.AdServiceUser));
+            // În bază parola e criptată; serviciile o citesc decriptată.
+            Assert.NotEqual("P@rola-AD-1", await first.SettingAsync(SettingKeys.AdServicePassword));
+            using var scope = first.Services.CreateScope();
+            Assert.Equal("P@rola-AD-1", await scope.ServiceProvider.GetRequiredService<ISettingsService>()
+                .GetSecretAsync(SettingKeys.AdServicePassword));
+        }
+
+        // Corectură în appsettings.json + repornire: noile valori înlocuiesc ce era în bază.
+        config["Setup:InitialSettings:Ad.Domain"] = "corp.contoso.local";
+        config["Setup:InitialSettings:Ad.ServicePassword"] = "P@rola-AD-2";
+        await using var second = new SetupFactory(root, dbName, config);
+        second.CreateClient();
+        Assert.Equal("corp.contoso.local", await second.SettingAsync(SettingKeys.AdDomain));
+        using (var scope = second.Services.CreateScope())
+        {
+            Assert.Equal("P@rola-AD-2", await scope.ServiceProvider.GetRequiredService<ISettingsService>()
+                .GetSecretAsync(SettingKeys.AdServicePassword));
+        }
+
+        // Fără modificări în fișier, repornirea nu mai scrie nimic (nici în audit).
+        var updates = second.WithAudit();
+        await using var third = new SetupFactory(root, dbName, config);
+        third.CreateClient();
+        Assert.Equal(updates, third.WithAudit());
     }
 
     [Fact]

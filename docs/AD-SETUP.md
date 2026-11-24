@@ -6,6 +6,54 @@ contul de serviciu, grupurile de administratori și aprobatori, SPN-urile pentru
 
 Exemplele folosesc domeniul `contoso.local` (NetBIOS `CONTOSO`) și adresa aplicației `https://mdel.contoso.local`.
 
+## Varianta rapidă: totul din `appsettings.json` (fără PowerShell)
+
+Dacă nu puteți rula scripturi PowerShell în AD, AD-ul și administratorul se configurează direct în
+`appsettings.json` din folderul aplicației (ex. `C:\inetpub\MDel\appsettings.json`), înainte de prima pornire:
+
+```json
+"Setup": {
+  "MigrateDatabaseOnStartup": true,
+  "InitialAdmins": [ "CONTOSO\\ion.popescu" ],
+  "OverwriteSettingsOnStartup": true,
+  "InitialSettings": {
+    "Ad.Domain": "contoso.local",
+    "Ad.LdapServer": "dc01.contoso.local",
+    "Ad.BaseDn": "DC=contoso,DC=local",
+    "Ad.ServiceUser": "CONTOSO\\svc-mdel",
+    "Ad.ServicePassword": "parola-contului",
+    "Groups.Admins": "CONTOSO\\MDel-Admins",
+    "Groups.AdminsEmail": "mdel-admins@contoso.local",
+    "Groups.Approvers": "CONTOSO\\MDel-Approvers",
+    "Groups.ApproversEmail": "mdel-approvers@contoso.local",
+    "General.BaseUrl": "https://mdel.contoso.local"
+  }
+}
+```
+
+În JSON, backslash-ul se scrie dublat (`CONTOSO\\ion.popescu`).
+
+- **`InitialAdmins`**: utilizatorul (sau utilizatorii) care e **Admin** în aplicație, indiferent de grupuri. Intră cu
+  contul Windows și parola lui din AD. Poate rămâne în fișier cât timp e nevoie.
+- **`Ad.ServiceUser` / `Ad.ServicePassword`**: un cont de domeniu obișnuit, fără drepturi speciale (orice utilizator
+  autentificat poate citi din AD), cu care aplicația caută utilizatorii. Gol = se folosește identitatea app pool-ului.
+  Parola se salvează **criptată** în bază la pornire.
+- **`OverwriteSettingsOnStartup: true`**: valorile din fișier se aplică la **fiecare pornire**, deci o greșeală se
+  corectează tot din fișier (modificați, reporniți app pool-ul). Cu `false` (implicit), fișierul completează doar
+  câmpurile goale, iar de acolo înainte setările se schimbă din ecranul Setări.
+- **Grupurile** pot fi orice grupuri de securitate existente în AD (create de echipa AD, de ex. din
+  *Active Directory Users and Computers*). Pot rămâne goale la început: aplicația funcționează cu adminul din
+  `InitialAdmins`; fără grup de aprobatori folosiți delegările **Fără aprobare**.
+
+După ce ați salvat fișierul: porniți app pool-ul. Baza se creează singură (pasul 5 pentru drepturile SQL), apoi
+deschideți aplicația cu contul din `InitialAdmins` și verificați în **Setări → Active Directory → Testează conexiunea**.
+Recomandare: după ce totul funcționează, ștergeți parola din fișier (rămâne salvată criptat în bază) sau lăsați
+`OverwriteSettingsOnStartup` pe `false`.
+
+**Fără SPN-uri** (pasul 3), autentificarea Windows funcționează prin NTLM; Kerberos e de preferat, dar nu e obligatoriu.
+
+Restul paginii detaliază fiecare pas, inclusiv varianta automată cu scriptul PowerShell.
+
 ## Pe scurt
 
 | # | Ce | Cine / unde |
@@ -153,15 +201,19 @@ Detalii și testare: [scripts/README.md](../scripts/README.md).
 
 | Cheie | Ce face |
 |---|---|
-| `InitialAdmins` | **Adminul inițial**: conturile din listă sunt administratori chiar dacă nu sunt (încă) în grupul `MDel-Admins`. Format `CONTOSO\\cont` sau doar `cont`. Conectarea se face tot cu Windows, cu parola contului din AD. Aplicația nu are parole proprii. |
-| `InitialSettings` | Valori copiate în **Setări** la prima pornire, doar pentru câmpurile încă goale. Ce salvați ulterior din ecranul Setări nu se suprascrie, deci secțiunea poate rămâne în fișier. |
+| `InitialAdmins` | **Adminul**: conturile din listă sunt administratori chiar dacă nu sunt în grupul `MDel-Admins`. Format `CONTOSO\\cont` sau doar `cont`. Conectarea se face tot cu Windows, cu parola contului din AD. Aplicația nu are parole proprii. |
+| `InitialSettings` | Valori copiate în **Setări** la pornire: implicit doar pentru câmpurile încă goale (ce salvați ulterior din ecranul Setări nu se suprascrie); cu `OverwriteSettingsOnStartup = true`, la fiecare pornire. |
 | `Ad.LdapServer` | gol = controlerul de domeniu se găsește prin DNS din `Ad.Domain`; altfel `dc01.contoso.local` sau `ldaps://dc01.contoso.local:636` |
 | `Ad.BaseDn` | gol = derivat din domeniu (`DC=contoso,DC=local`); se poate restrânge la un OU |
 | `Groups.*` | grupurile și adresele de la pasul 2 |
 | `General.BaseUrl` | adresa aplicației, pentru linkurile din emailuri |
 
-Se pot pune și alte setări (cheile din Setări, ex. `Exchange.PowerShellUri`, `Smtp.Host`, `Attachments.StoragePath`).
-Parolele **nu** se pun aici: se introduc din ecranul Setări, unde sunt criptate.
+| `Ad.ServiceUser` / `Ad.ServicePassword` | cont pentru citirea din AD; gol = identitatea app pool-ului. Parola se salvează criptată. |
+| `OverwriteSettingsOnStartup` | `true` = valorile din fișier se aplică la fiecare pornire (configurare doar din fișier) |
+
+Se pot pune și alte setări (cheile din Setări, ex. `Exchange.PowerShellUri`, `Exchange.ServiceUser`,
+`Exchange.ServicePassword`, `Smtp.Host`, `Smtp.FromAddress`, `Attachments.StoragePath`). Parolele se salvează criptate
+în bază; după prima pornire reușită le puteți șterge din fișier.
 
 ## Prima pornire și verificare
 
@@ -172,8 +224,8 @@ Parolele **nu** se pun aici: se introduc din ecranul Setări, unde sunt criptate
 3. Deschideți aplicația cu contul din `InitialAdmins`. Vedeți meniurile Dashboard, Delegări, Istoric/Audit și Setări.
 4. **Setări → Active Directory → Testează conexiunea**, apoi celelalte taburi (Exchange, SMTP, Fișiere), ca în
    [DEPLOY.md](DEPLOY.md), secțiunea 7.
-5. Verificați că un membru al grupului `MDel-Admins` intră ca administrator, apoi **scoateți-vă din `InitialAdmins`**
-   (lista goală `[]`) și reporniți app pool-ul. De acum rolurile vin doar din grupuri.
+5. Opțional, când grupul `MDel-Admins` e configurat: verificați că un membru al lui intră ca administrator, apoi
+   goliți `InitialAdmins` (`[]`) și reporniți app pool-ul. De acum rolurile vin doar din grupuri.
 
 ## Probleme frecvente
 

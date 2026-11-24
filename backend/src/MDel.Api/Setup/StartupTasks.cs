@@ -36,9 +36,8 @@ public static class StartupTasks
         var initialAdmins = InitialAdmins.Read(configuration);
         if (initialAdmins.Count > 0)
         {
-            logger.LogWarning(
-                "Setup:InitialAdmins is set ({Admins}): these accounts are administrators regardless of AD group membership. " +
-                "Remove them from appsettings.json once the AD groups are configured in Settings.",
+            logger.LogInformation(
+                "Setup:InitialAdmins ({Admins}): these accounts are administrators regardless of AD group membership.",
                 string.Join(", ", initialAdmins));
         }
     }
@@ -70,8 +69,11 @@ public static class StartupTasks
     }
 
     /// <summary>
-    /// Copiază în setări valorile din <c>Setup:InitialSettings</c> pentru cheile încă necompletate.
-    /// Ce a fost deja salvat din ecranul Setări nu se suprascrie, deci secțiunea poate rămâne în fișier.
+    /// Copiază în setări valorile din <c>Setup:InitialSettings</c>:
+    /// implicit doar pentru cheile încă necompletate (ce s-a salvat din ecranul Setări nu se suprascrie);
+    /// cu <c>Setup:OverwriteSettingsOnStartup = true</c>, la fiecare pornire, peste valorile din bază –
+    /// pentru cine configurează aplicația doar din appsettings.json.
+    /// Parolele (ex. <c>Ad.ServicePassword</c>) se salvează criptate, ca din ecranul Setări.
     /// </summary>
     private static async Task ApplyInitialSettingsAsync(IConfiguration configuration, ISettingsService settings, ILogger logger)
     {
@@ -80,6 +82,7 @@ public static class StartupTasks
             .ToDictionary(c => c.Key, c => c.Value!.Trim(), StringComparer.OrdinalIgnoreCase);
         if (configured.Count == 0) return;
 
+        var overwrite = configuration.GetValue("Setup:OverwriteSettingsOnStartup", false);
         var current = (await settings.GetAllAsync()).ToDictionary(s => s.Key, StringComparer.OrdinalIgnoreCase);
         var toApply = new Dictionary<string, string?>();
         foreach (var (key, value) in configured)
@@ -90,8 +93,15 @@ public static class StartupTasks
                 continue;
             }
 
-            var isEmpty = setting.IsSecret ? !setting.HasValue : string.IsNullOrWhiteSpace(setting.Value);
-            if (isEmpty) toApply[setting.Key] = value;
+            if (setting.IsSecret)
+            {
+                if (!setting.HasValue || (overwrite && !await SecretEqualsAsync(settings, setting.Key, value)))
+                    toApply[setting.Key] = value;
+            }
+            else if (string.IsNullOrWhiteSpace(setting.Value) || (overwrite && setting.Value != value))
+            {
+                toApply[setting.Key] = value;
+            }
         }
 
         if (toApply.Count == 0) return;
@@ -105,6 +115,19 @@ public static class StartupTasks
         {
             throw new InvalidOperationException("Setup:InitialSettings contains invalid values: " +
                 string.Join("; ", ex.Errors.Select(e => $"{e.Key}: {string.Join(" ", e.Value)}")), ex);
+        }
+    }
+
+    /// <summary>Parola salvată e aceeași? (Fără rescriere și audit la fiecare pornire.)</summary>
+    private static async Task<bool> SecretEqualsAsync(ISettingsService settings, string key, string value)
+    {
+        try
+        {
+            return await settings.GetSecretAsync(key) == value;
+        }
+        catch
+        {
+            return false; // ex. cheile Data Protection s-au schimbat: o rescriem
         }
     }
 }
