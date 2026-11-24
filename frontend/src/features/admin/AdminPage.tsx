@@ -3,7 +3,7 @@ import { Mail, PlugZap, RotateCcw, Search, Trash2, UserPlus, Users } from 'lucid
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { adminApi, type AdConfigView, type ConnectionTestResult, type MailboxForwarding, type OutboxFilter, type SettingView, type TestTarget } from '../../api/admin'
+import { adminApi, type ConnectionTestResult, type MailboxForwarding, type OutboxFilter, type SettingView, type TestTarget } from '../../api/admin'
 import { ApiError } from '../../api/client'
 import { PageHeader } from '../../components/layout/AppShell'
 import type { PickedUser } from '../../components/pickedUser'
@@ -14,7 +14,7 @@ import { TemplatesPanel } from './TemplatesPanel'
 import { cx } from '../../lib/cx'
 import { formatDateTime } from '../../lib/format'
 
-type FieldKind = 'text' | 'secret' | 'bool' | 'number' | 'language'
+type FieldKind = 'text' | 'secret' | 'bool' | 'number' | 'language' | 'textarea'
 
 /** Tab-urile: categoriile de setări + grupul de informare. */
 const tabs: { id: string; test?: TestTarget }[] = [
@@ -33,6 +33,10 @@ const tabs: { id: string; test?: TestTarget }[] = [
 const kinds: Record<string, FieldKind> = {
   'Exchange.KeepCopyInSource': 'bool',
   'Smtp.UseTls': 'bool',
+  'Ad.UseSsl': 'bool',
+  'Ad.ValidateCertificate': 'bool',
+  'Ad.Port': 'number',
+  'Ad.SearchBases': 'textarea',
   'General.PreventSelfApproval': 'bool',
   'Smtp.Port': 'number',
   'Attachments.MaxSizeMb': 'number',
@@ -83,11 +87,7 @@ export function AdminPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
           <div className="xl:col-span-3">
-            {tab === 'ActiveDirectory' && query.data.activeDirectory ? (
-              <AdFromAppSettings config={query.data.activeDirectory} />
-            ) : (
-              <SettingsForm key={tab} settings={query.data.settings.filter((s) => s.category === tab)} maxAttachmentMb={query.data.maxAttachmentMb} />
-            )}
+            <SettingsForm key={tab} settings={query.data.settings.filter((s) => s.category === tab)} maxAttachmentMb={query.data.maxAttachmentMb} />
           </div>
           {current.test && (
             <div className="xl:col-span-2">
@@ -174,8 +174,8 @@ function SettingsForm({ settings, maxAttachmentMb }: { settings: SettingView[]; 
                 <div className="flex gap-2">
                   <input
                     id={id}
-                    type="password"
-                    autoComplete="new-password"
+                    type={/User$/.test(s.key) ? 'text' : 'password'}
+                    autoComplete={/User$/.test(s.key) ? 'off' : 'new-password'}
                     className={inputClass(error)}
                     placeholder={s.hasValue ? t('admin.secretSet') : t('admin.secretNotSet')}
                     value={values[s.key] ?? ''}
@@ -198,6 +198,15 @@ function SettingsForm({ settings, maxAttachmentMb }: { settings: SettingView[]; 
                   <option value="ro">{t('language.ro')}</option>
                   <option value="en">{t('language.en')}</option>
                 </select>
+              ) : kind === 'textarea' ? (
+                <textarea
+                  id={id}
+                  rows={4}
+                  className={cx(inputClass(error), 'font-mono text-xs')}
+                  spellCheck={false}
+                  value={values[s.key] ?? ''}
+                  onChange={(e) => set(s.key, e.target.value)}
+                />
               ) : (
                 <input
                   id={id}
@@ -217,38 +226,6 @@ function SettingsForm({ settings, maxAttachmentMb }: { settings: SettingView[]; 
           {Object.keys(errors).length > 0 && <span className="text-sm text-danger">{t('admin.validationError')}</span>}
         </div>
       </form>
-    </Card>
-  )
-}
-
-/** Conexiunea AD vine din appsettings.json (ActiveDirectory:Enabled = true): doar afișare. */
-function AdFromAppSettings({ config }: { config: AdConfigView }) {
-  const { t } = useTranslation()
-  const rows: [string, string][] = [
-    [t('admin.adFile.server'), config.server ? `${config.server}:${config.port}` : '–'],
-    [t('admin.adFile.ssl'), config.useSsl ? (config.validateCertificate ? t('admin.yes') : t('admin.adFile.sslNoValidation')) : t('admin.no')],
-    [t('admin.adFile.authType'), config.authType || '–'],
-    [t('admin.adFile.bindUser'), config.bindUser ?? t('admin.adFile.appPool')],
-    [t('admin.adFile.password'), config.hasBindPassword ? t('admin.adFile.passwordSet') : t('admin.adFile.passwordNotSet')],
-    [t('admin.adFile.searchBases'), config.searchBases.length ? config.searchBases.join('\n') : t('admin.adFile.wholeDomain')],
-  ]
-  if (config.domain) rows.push([t('admin.adFile.domain'), config.domain])
-
-  return (
-    <Card>
-      <CardHeader title={t('admin.categories.ActiveDirectory')} />
-      <div className="flex flex-col gap-4 p-5">
-        <Alert>{t('admin.adFile.info')}</Alert>
-        {config.error && <Alert tone="danger">{config.error}</Alert>}
-        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-[max-content_1fr]">
-          {rows.map(([label, value]) => (
-            <div key={label} className="contents">
-              <dt className="text-muted">{label}</dt>
-              <dd className="whitespace-pre-line break-all font-medium">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
     </Card>
   )
 }

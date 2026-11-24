@@ -6,7 +6,10 @@ public static class SettingKeys
     // Active Directory
     public const string AdDomain = "Ad.Domain";
     public const string AdLdapServer = "Ad.LdapServer";
-    public const string AdBaseDn = "Ad.BaseDn";
+    public const string AdPort = "Ad.Port";
+    public const string AdUseSsl = "Ad.UseSsl";
+    public const string AdValidateCertificate = "Ad.ValidateCertificate";
+    public const string AdSearchBases = "Ad.SearchBases";
     public const string AdServiceUser = "Ad.ServiceUser";
     public const string AdServicePassword = "Ad.ServicePassword";
 

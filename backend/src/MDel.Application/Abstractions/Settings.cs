@@ -25,6 +25,12 @@ public interface ISettingsService
     /// Validează și auditează modificările. Aruncă <see cref="SettingsValidationException"/>.
     /// </summary>
     Task UpdateAsync(IReadOnlyDictionary<string, string?> values, CancellationToken ct = default);
+
+    /// <summary>
+    /// Criptează valorile secrete rămase necriptate în baza de date (ex. utilizatori salvați înainte ca
+    /// setarea să devină secretă). Idempotent; returnează numărul de valori criptate.
+    /// </summary>
+    Task<int> EncryptPlainSecretsAsync(CancellationToken ct = default);
 }
 
 public sealed class SettingsValidationException(IReadOnlyDictionary<string, string[]> errors)

@@ -31,7 +31,11 @@ public static class StartupTasks
             await MigrateAsync(db, logger);
         }
 
-        await ApplyInitialSettingsAsync(configuration, services.GetRequiredService<ISettingsService>(), logger);
+        var settings = services.GetRequiredService<ISettingsService>();
+        var encrypted = await settings.EncryptPlainSecretsAsync();
+        if (encrypted > 0) logger.LogInformation("Encrypted {Count} account/password value(s) that were stored in plain text.", encrypted);
+
+        await ApplyInitialSettingsAsync(configuration, settings, logger);
 
         var initialAdmins = InitialAdmins.Read(configuration);
         if (initialAdmins.Count > 0)
@@ -73,7 +77,7 @@ public static class StartupTasks
     /// implicit doar pentru cheile încă necompletate (ce s-a salvat din ecranul Setări nu se suprascrie);
     /// cu <c>Setup:OverwriteSettingsOnStartup = true</c>, la fiecare pornire, peste valorile din bază –
     /// pentru cine configurează aplicația doar din appsettings.json.
-    /// Parolele (ex. <c>Ad.ServicePassword</c>) se salvează criptate, ca din ecranul Setări.
+    /// Conturile și parolele (setări secrete) nu se acceptă aici: se introduc doar din interfață.
     /// </summary>
     private static async Task ApplyInitialSettingsAsync(IConfiguration configuration, ISettingsService settings, ILogger logger)
     {
@@ -95,8 +99,9 @@ public static class StartupTasks
 
             if (setting.IsSecret)
             {
-                if (!setting.HasValue || (overwrite && !await SecretEqualsAsync(settings, setting.Key, value)))
-                    toApply[setting.Key] = value;
+                // Conturile și parolele (AD, Exchange, SMTP) se introduc doar din interfață și se salvează criptat:
+                // nu pot apărea în fișiere de configurare.
+                logger.LogWarning("Setup:InitialSettings: '{Key}' is an account/password and can be set only from Settings; ignored.", key);
             }
             else if (string.IsNullOrWhiteSpace(setting.Value) || (overwrite && setting.Value != value))
             {
@@ -117,23 +122,10 @@ public static class StartupTasks
                 string.Join("; ", ex.Errors.Select(e => $"{e.Key}: {string.Join(" ", e.Value)}")), ex);
         }
     }
-
-    /// <summary>Parola salvată e aceeași? (Fără rescriere și audit la fiecare pornire.)</summary>
-    private static async Task<bool> SecretEqualsAsync(ISettingsService settings, string key, string value)
-    {
-        try
-        {
-            return await settings.GetSecretAsync(key) == value;
-        }
-        catch
-        {
-            return false; // ex. cheile Data Protection s-au schimbat: o rescriem
-        }
-    }
 }
 
 /// <summary>
-/// Conturile din <c>Setup:InitialAdmins</c> primesc rolul de administrator indiferent de grupurile AD –
+/// Conturile din <c>Setup:InitialAdmins</c> primesc fiecare rol cât timp grupul acelui rol nu e configurat –
 /// pentru prima conectare, înainte de configurarea grupurilor în Setări.
 /// </summary>
 public static class InitialAdmins

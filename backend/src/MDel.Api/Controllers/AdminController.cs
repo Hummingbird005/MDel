@@ -7,7 +7,6 @@ using MDel.Infrastructure.Notifications;
 using MDel.Infrastructure.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace MDel.Api.Controllers;
 
@@ -24,16 +23,9 @@ public sealed class AdminController(
     AttachmentStorageProbe storage,
     ICurrentUser currentUser,
     IAuditService audit,
-    InformGroupService informGroup,
-    IOptionsMonitor<ActiveDirectoryOptions> adOptions) : ControllerBase
+    InformGroupService informGroup) : ControllerBase
 {
-    /// <param name="ActiveDirectory">Conexiunea AD din appsettings.json, când e activată (altfel null = din Setări).</param>
-    public sealed record SettingsResponse(IReadOnlyList<SettingView> Settings, int MaxAttachmentMb, AdConfigView? ActiveDirectory);
-
-    /// <summary>Secțiunea ActiveDirectory din appsettings.json, fără parolă.</summary>
-    public sealed record AdConfigView(
-        string? Server, int Port, bool UseSsl, bool ValidateCertificate, string AuthType,
-        string? BindUser, bool HasBindPassword, IReadOnlyList<string> SearchBases, string? Domain, string? Error);
+    public sealed record SettingsResponse(IReadOnlyList<SettingView> Settings, int MaxAttachmentMb);
 
     public sealed record UpdateSettingsRequest(Dictionary<string, string?> Values);
 
@@ -41,26 +33,7 @@ public sealed class AdminController(
 
     [HttpGet("settings")]
     public async Task<SettingsResponse> GetSettings(CancellationToken ct) =>
-        new(await settings.GetAllAsync(ct), validator.MaxAttachmentMb, DescribeAdOptions(adOptions.CurrentValue));
-
-    private static AdConfigView? DescribeAdOptions(ActiveDirectoryOptions o)
-    {
-        if (!o.Enabled) return null;
-
-        var bases = (o.SearchBases ?? []).Where(b => !string.IsNullOrWhiteSpace(b)).ToArray();
-        try
-        {
-            var info = LdapConnectionInfo.FromOptions(o);
-            return new AdConfigView(info.Host, info.Port, info.UseSsl, info.ValidateCertificate, info.AuthType.ToString(),
-                info.BindUser, !string.IsNullOrEmpty(info.BindPassword), bases, info.Domain, null);
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Configurație incompletă / greșită: o arătăm așa cum e, cu motivul.
-            return new AdConfigView(o.Server, o.Port ?? 0, o.UseSsl, o.ValidateCertificate, o.AuthType ?? "",
-                o.BindUser, !string.IsNullOrEmpty(o.BindPassword), bases, o.Domain, ex.Message);
-        }
-    }
+        new(await settings.GetAllAsync(ct), validator.MaxAttachmentMb);
 
     [HttpPut("settings")]
     public async Task<IActionResult> UpdateSettings(UpdateSettingsRequest request, CancellationToken ct)

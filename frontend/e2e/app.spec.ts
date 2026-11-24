@@ -56,6 +56,38 @@ test('administratorul de delegări nu vede Setări și Audit, administratorul de
   await expect(system.getByText('Nu aveți drepturi pentru această pagină.')).toBeVisible()
 })
 
+test('Active Directory se configurează din Setări, iar contul și parola nu se mai afișează', async ({ browser, request }) => {
+  const page = await (await browser.newContext({ extraHTTPHeaders: SYSTEM_ADMIN })).newPage()
+  await page.goto('/admin')
+  await page.getByLabel('Server LDAP / controler de domeniu').fill('dc01.corp.local')
+  await page.getByRole('switch', { name: 'Folosește SSL (LDAPS)' }).click()
+  await page.getByLabel('Port').fill('636')
+  await page.getByLabel('OU-uri de căutare').fill('OU=Angajati,DC=corp,DC=local\nOU=Externi,DC=corp,DC=local')
+  await page.getByLabel('Cont de citire din AD').fill('CN=svc-mdel,OU=Servicii,DC=corp,DC=local')
+  await page.getByLabel('Parola contului').fill('Parola-Secreta-1')
+  await page.getByRole('button', { name: 'Salvează' }).click()
+  await expect(page.getByText('Setările au fost salvate.')).toBeVisible()
+
+  // După reîncărcare: cele nesecrete se văd, contul și parola apar doar ca „setate”.
+  await page.reload()
+  await expect(page.getByLabel('Server LDAP / controler de domeniu')).toHaveValue('dc01.corp.local')
+  await expect(page.getByLabel('OU-uri de căutare')).toHaveValue(/OU=Externi/)
+  await expect(page.getByLabel('Cont de citire din AD')).toHaveValue('')
+  await expect(page.getByLabel('Cont de citire din AD')).toHaveAttribute('placeholder', /setat/)
+  await expect(page.getByLabel('Parola contului')).toHaveAttribute('placeholder', /setat/)
+
+  const raw = await (await request.get('http://localhost:5080/api/admin/settings', { headers: SYSTEM_ADMIN })).text()
+  expect(raw).not.toContain('Parola-Secreta-1')
+  expect(raw).not.toContain('svc-mdel')
+
+  // Curățenie: fără server AD completat, aplicația de test revine la AD-ul simulat folosit de celelalte teste.
+  const cleanup = await request.put('http://localhost:5080/api/admin/settings', {
+    headers: SYSTEM_ADMIN,
+    data: { values: { 'Ad.LdapServer': '', 'Ad.Port': '', 'Ad.UseSsl': 'false', 'Ad.SearchBases': '', 'Ad.ServiceUser': '', 'Ad.ServicePassword': '' } },
+  })
+  expect(cleanup.status()).toBe(204)
+})
+
 test('auditul arată acțiunile și detaliul cu valori vechi/noi', async ({ browser, request }) => {
   const r = await request.put('http://localhost:5080/api/admin/settings', {
     headers: ADMIN,

@@ -9,6 +9,7 @@ public sealed class SettingsValidator(long maxRequestBodyBytes)
     private static readonly HashSet<string> BoolKeys =
     [
         SettingKeys.ExchangeKeepCopyInSource, SettingKeys.SmtpUseTls, SettingKeys.PreventSelfApproval,
+        SettingKeys.AdUseSsl, SettingKeys.AdValidateCertificate,
     ];
 
     /// <summary>Limita maximă permisă pentru atașamente = limita serverului minus o marjă pentru restul formularului.</summary>
@@ -44,8 +45,14 @@ public sealed class SettingsValidator(long maxRequestBodyBytes)
                     ? null : "Must be an integer between 1 and 3650 days.";
 
             case SettingKeys.SmtpPort:
+            case SettingKeys.AdPort:
                 return int.TryParse(value, out var port) && port is >= 1 and <= 65535
                     ? null : "Must be a port between 1 and 65535.";
+
+            case SettingKeys.AdSearchBases:
+                var bases = value.Split(['\r', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                return bases.Length <= 50 && bases.All(b => b.Contains('=') && b.Length <= 500)
+                    ? null : "One distinguished name per line, like OU=Angajati,DC=corp,DC=local (at most 50).";
 
             case SettingKeys.DefaultLanguage:
                 return value is "ro" or "en" ? null : "Must be 'ro' or 'en'.";

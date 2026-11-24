@@ -81,7 +81,7 @@ public sealed class SmtpMailService(ISettingsService settings, ILogger<SmtpMailS
 
     private async Task<SmtpConfig> LoadAsync(CancellationToken ct)
     {
-        var user = await settings.GetAsync(SettingKeys.SmtpUser, ct);
+        var user = await settings.GetSecretAsync(SettingKeys.SmtpUser, ct); // utilizator criptat în baza de date
         return new SmtpConfig(
             await settings.GetAsync(SettingKeys.SmtpHost, ct) ?? string.Empty,
             await settings.GetIntAsync(SettingKeys.SmtpPort, 25, ct),

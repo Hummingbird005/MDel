@@ -14,8 +14,11 @@ internal static class DefaultSettings
     [
         S(SettingKeys.AdDomain, "", "ActiveDirectory"),
         S(SettingKeys.AdLdapServer, "", "ActiveDirectory"),
-        S(SettingKeys.AdBaseDn, "", "ActiveDirectory"),
-        S(SettingKeys.AdServiceUser, "", "ActiveDirectory"),
+        S(SettingKeys.AdPort, "", "ActiveDirectory"),
+        S(SettingKeys.AdUseSsl, "false", "ActiveDirectory"),
+        S(SettingKeys.AdValidateCertificate, "true", "ActiveDirectory"),
+        S(SettingKeys.AdSearchBases, "", "ActiveDirectory"),
+        S(SettingKeys.AdServiceUser, null, "ActiveDirectory", secret: true),
         S(SettingKeys.AdServicePassword, null, "ActiveDirectory", secret: true),
 
         S(SettingKeys.GroupAdmins, "", "Groups"),
@@ -25,14 +28,14 @@ internal static class DefaultSettings
         S(SettingKeys.GroupApproversEmail, "", "Groups"),
 
         S(SettingKeys.ExchangePowerShellUri, "", "Exchange"),
-        S(SettingKeys.ExchangeServiceUser, "", "Exchange"),
+        S(SettingKeys.ExchangeServiceUser, null, "Exchange", secret: true),
         S(SettingKeys.ExchangeServicePassword, null, "Exchange", secret: true),
         S(SettingKeys.ExchangeKeepCopyInSource, "true", "Exchange"),
 
         S(SettingKeys.SmtpHost, "", "Smtp"),
         S(SettingKeys.SmtpPort, "25", "Smtp"),
         S(SettingKeys.SmtpUseTls, "true", "Smtp"),
-        S(SettingKeys.SmtpUser, "", "Smtp"),
+        S(SettingKeys.SmtpUser, null, "Smtp", secret: true),
         S(SettingKeys.SmtpPassword, null, "Smtp", secret: true),
         S(SettingKeys.SmtpFromAddress, "", "Smtp"),
 

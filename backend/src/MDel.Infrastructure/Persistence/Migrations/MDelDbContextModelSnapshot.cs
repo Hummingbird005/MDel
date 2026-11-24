@@ -76,7 +76,31 @@ namespace MDel.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Key = "Ad.BaseDn",
+                            Key = "Ad.Port",
+                            Category = "ActiveDirectory",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Key = "Ad.UseSsl",
+                            Category = "ActiveDirectory",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "false"
+                        },
+                        new
+                        {
+                            Key = "Ad.ValidateCertificate",
+                            Category = "ActiveDirectory",
+                            IsSecret = false,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "true"
+                        },
+                        new
+                        {
+                            Key = "Ad.SearchBases",
                             Category = "ActiveDirectory",
                             IsSecret = false,
                             UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -86,9 +110,8 @@ namespace MDel.Infrastructure.Persistence.Migrations
                         {
                             Key = "Ad.ServiceUser",
                             Category = "ActiveDirectory",
-                            IsSecret = false,
-                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Value = ""
+                            IsSecret = true,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
@@ -149,9 +172,8 @@ namespace MDel.Infrastructure.Persistence.Migrations
                         {
                             Key = "Exchange.ServiceUser",
                             Category = "Exchange",
-                            IsSecret = false,
-                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Value = ""
+                            IsSecret = true,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
@@ -196,9 +218,8 @@ namespace MDel.Infrastructure.Persistence.Migrations
                         {
                             Key = "Smtp.User",
                             Category = "Smtp",
-                            IsSecret = false,
-                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Value = ""
+                            IsSecret = true,
+                            UpdatedUtc = new DateTime(2026, 11, 23, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {

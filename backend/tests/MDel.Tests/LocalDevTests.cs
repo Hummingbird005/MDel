@@ -40,21 +40,43 @@ public class LocalDevTests(MDelApiFactory factory) : IClassFixture<MDelApiFactor
     }
 
     [Fact]
-    public void Fakes_are_used_by_default_in_development() =>
-        Assert.IsType<FakeDirectoryService>(factory.Services.GetRequiredService<IDirectoryService>());
+    public void Simulated_directory_is_the_default_in_development() =>
+        Assert.IsType<ConfigurableDirectoryService>(factory.Services.GetRequiredService<IDirectoryService>());
 
     [Fact]
-    public void Enabled_active_directory_section_uses_real_ldap_while_exchange_and_mail_stay_fake()
+    public async Task Real_ad_is_used_as_soon_as_it_is_filled_in_settings_without_restart()
     {
-        using var configured = factory.WithWebHostBuilder(b =>
-        {
-            b.UseSetting("ActiveDirectory:Enabled", "true");
-            b.UseSetting("ActiveDirectory:Server", "dc01.corp.local");
-        });
+        var client = factory.CreateClient();
+        const string search = "/api/directory/users?q=ion&mailboxOnly=false";
 
-        Assert.IsType<LdapDirectoryService>(configured.Services.GetRequiredService<IDirectoryService>());
-        Assert.IsType<FakeExchangeService>(configured.Services.GetRequiredService<IExchangeService>());
-        Assert.IsType<FakeMailService>(configured.Services.GetRequiredService<IMailService>());
+        // Nesetat: AD simulat.
+        var simulated = await client.GetFromJsonAsync<List<DirectoryUserDto>>(search);
+        Assert.Contains(simulated!, u => u.SamAccountName == "ion.popescu");
+
+        try
+        {
+            // Completat (un server care nu răspunde): se încearcă AD-ul real și eșuează cu 502.
+            await client.PutAsJsonAsync("/api/admin/settings",
+                new { values = new Dictionary<string, string?> { ["Ad.LdapServer"] = "127.0.0.1:1" } });
+            Assert.Equal(HttpStatusCode.BadGateway, (await client.GetAsync(search)).StatusCode);
+        }
+        finally
+        {
+            await client.PutAsJsonAsync("/api/admin/settings", new { values = new Dictionary<string, string?> { ["Ad.LdapServer"] = "" } });
+        }
+
+        Assert.Contains((await client.GetFromJsonAsync<List<DirectoryUserDto>>(search))!, u => u.SamAccountName == "ion.popescu");
+    }
+
+    private sealed record DirectoryUserDto(string SamAccountName);
+
+    [Theory]
+    [InlineData("true", typeof(FakeDirectoryService))]
+    [InlineData("false", typeof(LdapDirectoryService))]
+    public void The_directory_can_be_forced_simulated_or_real(string fake, Type expected)
+    {
+        using var configured = factory.WithWebHostBuilder(b => b.UseSetting("Integrations:FakeDirectory", fake));
+        Assert.IsType(expected, configured.Services.GetRequiredService<IDirectoryService>());
     }
 
     [Fact]
@@ -62,6 +84,6 @@ public class LocalDevTests(MDelApiFactory factory) : IClassFixture<MDelApiFactor
     {
         using var configured = factory.WithWebHostBuilder(b => b.UseSetting("Integrations:FakeExchange", "false"));
         Assert.IsType<ExchangePowerShellService>(configured.Services.GetRequiredService<IExchangeService>());
-        Assert.IsType<FakeDirectoryService>(configured.Services.GetRequiredService<IDirectoryService>());
+        Assert.IsType<ConfigurableDirectoryService>(configured.Services.GetRequiredService<IDirectoryService>());
     }
 }
