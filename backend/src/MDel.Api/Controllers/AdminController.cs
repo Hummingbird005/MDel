@@ -202,8 +202,9 @@ public sealed class AdminController(
         {
             return await exchange.GetForwardingAsync(mailbox.Trim(), ct);
         }
-        catch (Exception ex) when (ex is InvalidOperationException or ExchangeCommandException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Orice eroare Exchange (inclusiv conexiune WinRM / Kerberos) ajunge la utilizator cu mesajul ei, nu ca 500.
             return Problem(ex.Message, statusCode: StatusCodes.Status502BadGateway);
         }
     }

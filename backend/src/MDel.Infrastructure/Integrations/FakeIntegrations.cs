@@ -48,17 +48,38 @@ public sealed class FakeExchangeService(ILogger<FakeExchangeService> logger) : I
     /// <summary>Pentru teste: Set-Mailbox eșuează cât timp e true.</summary>
     public bool FailSet { get; set; }
 
+    /// <summary>Pentru teste: următoarele N apeluri Set-Mailbox eșuează (eroare trecătoare, doar pentru unele operații).</summary>
+    public int FailNextSets { get; set; }
+
     public Task SetForwardingAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward, CancellationToken ct)
     {
+        // Ca implementarea reală: aplicația pune forward doar către căsuțe interne.
+        if (forwardingAddress is not null && !IsInternal(forwardingAddress))
+            throw new InvalidOperationException($"'{forwardingAddress}' is not an internal mailbox; only internal forwarding is allowed.");
+        return SetAsync(mailboxIdentity, forwardingAddress, deliverToMailboxAndForward);
+    }
+
+    public Task RestoreForwardingAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward, CancellationToken ct) =>
+        SetAsync(mailboxIdentity, forwardingAddress, deliverToMailboxAndForward);
+
+    private Task SetAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward)
+    {
         if (FailSet) throw new InvalidOperationException("WinRM: the Exchange server is not reachable (fake).");
+        if (FailNextSets > 0)
+        {
+            FailNextSets--;
+            throw new InvalidOperationException("WinRM: transient error (fake).");
+        }
         logger.LogInformation("[FAKE] Set-Mailbox {Mailbox} -ForwardingAddress {Target} -DeliverToMailboxAndForward {Keep}",
             mailboxIdentity, forwardingAddress ?? "$null", deliverToMailboxAndForward);
         _state[mailboxIdentity] = new MailboxForwarding(forwardingAddress, deliverToMailboxAndForward);
         return Task.CompletedTask;
     }
 
-    public Task<bool> IsInternalRecipientAsync(string identity, CancellationToken ct) =>
-        Task.FromResult(identity.EndsWith("@contoso.local", StringComparison.OrdinalIgnoreCase) || !identity.Contains('@'));
+    public Task<bool> IsInternalRecipientAsync(string identity, CancellationToken ct) => Task.FromResult(IsInternal(identity));
+
+    private static bool IsInternal(string identity) =>
+        identity.EndsWith("@contoso.local", StringComparison.OrdinalIgnoreCase) || !identity.Contains('@');
 
     public Task<ConnectionTestResult> TestConnectionAsync(CancellationToken ct) =>
         Task.FromResult(new ConnectionTestResult(true, "Fake Exchange (development)."));

@@ -26,7 +26,7 @@ public sealed class RetentionService(
         var attachmentDays = await settings.GetIntAsync(SettingKeys.RetentionAttachmentsDays, 365, ct);
         var auditDays = await settings.GetIntAsync(SettingKeys.RetentionAuditDays, 365, ct);
 
-        var attachments = await PurgeAttachmentsAsync(now.AddDays(-attachmentDays), ct);
+        var attachments = await PurgeAttachmentsAsync(now.AddDays(-attachmentDays), now, ct);
         var auditCount = await db.PurgeAuditLogsAsync(now.AddDays(-auditDays), ct);
 
         if (attachments + auditCount > 0)
@@ -39,11 +39,12 @@ public sealed class RetentionService(
         return new RetentionResult(attachments, auditCount);
     }
 
-    private async Task<int> PurgeAttachmentsAsync(DateTime cutoffUtc, CancellationToken ct)
+    private async Task<int> PurgeAttachmentsAsync(DateTime cutoffUtc, DateTime nowUtc, CancellationToken ct)
     {
         var root = await settings.GetAsync(SettingKeys.AttachmentsStoragePath, ct);
+        // Fișierele unei delegări care încă nu s-a terminat (ex. o delegare de peste un an) nu se șterg.
         var old = await db.DelegationAttachments
-            .Where(a => a.PurgedUtc == null && a.UploadedUtc < cutoffUtc)
+            .Where(a => a.PurgedUtc == null && a.UploadedUtc < cutoffUtc && a.Delegation.EndUtc <= nowUtc)
             .Take(500)
             .ToListAsync(ct);
 

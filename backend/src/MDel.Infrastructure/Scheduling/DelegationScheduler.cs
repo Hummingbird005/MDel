@@ -67,6 +67,12 @@ public sealed class DelegationScheduler(
         {
             var ok = await ProcessAsync(id, async d =>
             {
+                if (await ForwardingGuard.SourceHasOtherAppliedForwardAsync(db, d, ct))
+                {
+                    logger.LogInformation("Delegation {Id} waits: another forward on the same mailbox is still applied", d.Id);
+                    return true;
+                }
+
                 if (await forwarding.ApplyAsync(d, null, ct))
                 {
                     await notifications.EnqueueAsync(d, NotificationEvent.Activated, null, ct);
@@ -104,6 +110,7 @@ public sealed class DelegationScheduler(
 
                 if (!applied && d.StartUtc <= now)
                 {
+                    if (await ForwardingGuard.SourceHasOtherAppliedForwardAsync(db, d, ct)) return true;
                     if (!await forwarding.ApplyAsync(d, null, ct)) return false;
                     await notifications.EnqueueAsync(d, NotificationEvent.Activated, null, ct);
                     return true;

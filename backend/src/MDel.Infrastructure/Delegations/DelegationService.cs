@@ -231,10 +231,7 @@ public sealed class DelegationService(
         await notifications.EnqueueAsync(d, NotificationEvent.Created, d.Notes, ct);
 
         // Fără aprobare și cu startul atins: se activează imediat.
-        if (!d.RequiresApproval && d.StartUtc <= now && !await forwarding.ApplyAsync(d, currentUser.UserId, ct))
-        {
-            await notifications.EnqueueAsync(d, NotificationEvent.Failed, d.LastError, ct);
-        }
+        if (!d.RequiresApproval && d.StartUtc <= now) await ApplyNowIfFreeAsync(d, ct);
 
         await db.SaveChangesAsync(ct);
         return d.Id;
@@ -291,9 +288,11 @@ public sealed class DelegationService(
 
             case DelegationStatus.Active:
             {
+                // Formularul trimite data de început la precizie de minut (câmp datetime-local), iar cea salvată poate
+                // avea secunde (delegare pornită „acum”): se compară la nivel de minut.
                 var sameUsers = UserProvisioningService.NormalizeSam(request.FromSam) == d.FromUser.SamAccountName &&
                                 UserProvisioningService.NormalizeSam(request.ToSam) == d.ToUser.SamAccountName &&
-                                ToUtc(request.StartUtc) == d.StartUtc;
+                                TruncateToMinute(ToUtc(request.StartUtc)) == TruncateToMinute(DateTime.SpecifyKind(d.StartUtc, DateTimeKind.Utc));
                 if (!sameUsers)
                 {
                     throw Invalid(nameof(request.StartUtc), Messages.Get("ActiveOnlyEnd"));
@@ -301,6 +300,11 @@ public sealed class DelegationService(
 
                 var end = ToUtc(request.EndUtc);
                 if (end <= now) throw Invalid(nameof(request.EndUtc), Messages.Get("EndInPast"));
+
+                // Prelungirea nu poate intra peste o altă delegare pe aceeași căsuță (sau peste un forward invers).
+                var (overlapId, loopId) = await FindConflictsAsync(d.FromUser.SamAccountName, d.ToUser.SamAccountName, now, end, d.Id, ct);
+                if (overlapId is { } o) throw Invalid(nameof(request.EndUtc), Messages.Get("Overlap", o));
+                if (loopId is { } l) throw Invalid(nameof(request.EndUtc), Messages.Get("Loop", l));
 
                 d.EndUtc = end;
                 d.Notes = NullIfEmpty(request.Notes);
@@ -318,8 +322,7 @@ public sealed class DelegationService(
 
         if (d.Status == DelegationStatus.Scheduled && d.StartUtc <= now)
         {
-            if (!await forwarding.ApplyAsync(d, currentUser.UserId, ct))
-                await notifications.EnqueueAsync(d, NotificationEvent.Failed, d.LastError, ct);
+            await ApplyNowIfFreeAsync(d, ct);
             await SaveAsync(ct);
         }
     }
@@ -359,10 +362,7 @@ public sealed class DelegationService(
             NewValues: new { Status = d.Status.ToString(), ApprovedBy = currentUser.UserName, ApprovedUtc = d.ApprovedUtc }), ct);
         await notifications.EnqueueAsync(d, NotificationEvent.Approved, null, ct);
 
-        if (d.StartUtc <= now && !await forwarding.ApplyAsync(d, currentUser.UserId, ct))
-        {
-            await notifications.EnqueueAsync(d, NotificationEvent.Failed, d.LastError, ct);
-        }
+        if (d.StartUtc <= now) await ApplyNowIfFreeAsync(d, ct);
 
         await SaveAsync(ct);
     }
@@ -500,21 +500,8 @@ public sealed class DelegationService(
 
         if (from is not null && to is not null && errors.Count == 0)
         {
-            var effectiveStart = MaxDate(start, now);
-
-            var overlap = await db.Delegations.AsNoTracking()
-                .Where(d => d.Id != existingId && d.FromUser.SamAccountName == from.SamAccountName &&
-                            DelegationStateMachine.OpenStatuses.Contains(d.Status) &&
-                            d.StartUtc < end && effectiveStart < d.EndUtc)
-                .Select(d => (int?)d.Id).FirstOrDefaultAsync(ct);
+            var (overlap, loop) = await FindConflictsAsync(from.SamAccountName, to.SamAccountName, MaxDate(start, now), end, existingId, ct);
             if (overlap is { } o) Add(nameof(r.FromSam), Messages.Get("Overlap", o));
-
-            var loop = await db.Delegations.AsNoTracking()
-                .Where(d => d.Id != existingId && d.FromUser.SamAccountName == to.SamAccountName &&
-                            d.ToUser.SamAccountName == from.SamAccountName &&
-                            DelegationStateMachine.OpenStatuses.Contains(d.Status) &&
-                            d.StartUtc < end && effectiveStart < d.EndUtc)
-                .Select(d => (int?)d.Id).FirstOrDefaultAsync(ct);
             if (loop is { } l) Add(nameof(r.ToSam), Messages.Get("Loop", l));
         }
 
@@ -524,6 +511,27 @@ public sealed class DelegationService(
         }
 
         return (from!, to!);
+    }
+
+    /// <summary>
+    /// Altă delegare deschisă pe aceeași căsuță sursă în interval (suprapunere) sau un forward invers (buclă).
+    /// </summary>
+    private async Task<(int? Overlap, int? Loop)> FindConflictsAsync(string fromSam, string toSam, DateTime start, DateTime end,
+        int? existingId, CancellationToken ct)
+    {
+        var overlap = await db.Delegations.AsNoTracking()
+            .Where(d => d.Id != existingId && d.FromUser.SamAccountName == fromSam &&
+                        DelegationStateMachine.OpenStatuses.Contains(d.Status) &&
+                        d.StartUtc < end && start < d.EndUtc)
+            .Select(d => (int?)d.Id).FirstOrDefaultAsync(ct);
+
+        var loop = await db.Delegations.AsNoTracking()
+            .Where(d => d.Id != existingId && d.FromUser.SamAccountName == toSam && d.ToUser.SamAccountName == fromSam &&
+                        DelegationStateMachine.OpenStatuses.Contains(d.Status) &&
+                        d.StartUtc < end && start < d.EndUtc)
+            .Select(d => (int?)d.Id).FirstOrDefaultAsync(ct);
+
+        return (overlap, loop);
     }
 
     private async Task<DirectoryUser?> ResolveUserAsync(string? sam, string field, Action<string, string> add, CancellationToken ct)
@@ -591,6 +599,17 @@ public sealed class DelegationService(
     };
 
     private static DateTime MaxDate(DateTime a, DateTime b) => a > b ? a : b;
+
+    private static DateTime TruncateToMinute(DateTime value) => new(value.Ticks - value.Ticks % TimeSpan.TicksPerMinute, value.Kind);
+
+    /// <summary>Activare imediată (start atins), doar dacă nicio altă delegare nu mai are forward pe aceeași căsuță.</summary>
+    private async Task ApplyNowIfFreeAsync(Delegation d, CancellationToken ct)
+    {
+        if (await ForwardingGuard.SourceHasOtherAppliedForwardAsync(db, d, ct)) return; // o activează scheduler-ul
+
+        if (!await forwarding.ApplyAsync(d, currentUser.UserId, ct))
+            await notifications.EnqueueAsync(d, NotificationEvent.Failed, d.LastError, ct);
+    }
 
     private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

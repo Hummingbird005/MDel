@@ -48,6 +48,15 @@ public sealed class ExchangePowerShellService(ISettingsService settings, ILogger
             throw new InvalidOperationException($"'{forwardingAddress}' is not an internal mailbox; only internal forwarding is allowed.");
         }
 
+        await SetMailboxForwardingAsync(mailboxIdentity, forwardingAddress, deliverToMailboxAndForward, ct);
+    }
+
+    public Task RestoreForwardingAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward, CancellationToken ct) =>
+        // Starea dinainte de delegare se reface exact cum era (poate fi și un contact extern pus manual).
+        SetMailboxForwardingAsync(mailboxIdentity, forwardingAddress, deliverToMailboxAndForward, ct);
+
+    private async Task SetMailboxForwardingAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward, CancellationToken ct)
+    {
         await InvokeAsync("Set-Mailbox", new Dictionary<string, object?>
         {
             ["Identity"] = mailboxIdentity,

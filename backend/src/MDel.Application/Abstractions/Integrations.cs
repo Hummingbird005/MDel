@@ -29,7 +29,14 @@ public sealed record MailboxForwarding(
 public interface IExchangeService
 {
     Task<MailboxForwarding> GetForwardingAsync(string mailboxIdentity, CancellationToken ct);
+    /// <summary>Pune forwardul aplicației: doar către o căsuță internă (altfel excepție).</summary>
     Task SetForwardingAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward, CancellationToken ct);
+
+    /// <summary>
+    /// Readuce forwardul care exista înainte de delegare, oricare ar fi el (ex. un contact extern pus manual).
+    /// Fără verificarea „doar intern”: aplicația nu creează forwardul, doar refac starea inițială.
+    /// </summary>
+    Task RestoreForwardingAsync(string mailboxIdentity, string? forwardingAddress, bool deliverToMailboxAndForward, CancellationToken ct);
     Task<bool> IsInternalRecipientAsync(string identity, CancellationToken ct);
     Task<ConnectionTestResult> TestConnectionAsync(CancellationToken ct);
 }
