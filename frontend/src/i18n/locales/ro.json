@@ -2,7 +2,7 @@
   "app": {
     "title": "MDel – Forward căsuțe email",
     "shortTitle": "MDel",
-    "subtitle": "Exchange 2016 · forward",
+    "subtitle": "Exchange Mail forward",
     "footer": "Forward temporar de email, cu aprobare și expirare automată."
   },
   "nav": {
