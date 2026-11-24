@@ -12,13 +12,24 @@ rm -rf "$OFF/nuget" "$OFF/npm-cache"
 mkdir -p "$OFF/nuget" "$OFF/npm-cache"
 
 echo "==> NuGet"
+# backend/NuGet.config indică offline/nuget (care tocmai se regenerează): aici descărcăm de pe nuget.org.
+ONLINE_CONFIG="$(mktemp -d)/NuGet.config"
+cat > "$ONLINE_CONFIG" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+  </packageSources>
+</configuration>
+XML
 export NUGET_PACKAGES="$OFF/nuget"   # restaurarea scrie direct în folderul offline (format „feed” local)
 cd "$ROOT/backend"
-dotnet restore MDel.slnx
+dotnet restore MDel.slnx --configfile "$ONLINE_CONFIG"
 # Pachetele necesare pentru publicarea pe Windows (apphost, runtime-uri pentru efbundle self-contained).
-dotnet restore src/MDel.Api/MDel.Api.csproj -r win-x64
-dotnet restore src/MDel.Infrastructure/MDel.Infrastructure.csproj -r win-x64
-dotnet restore src/MDel.Api/MDel.Api.csproj -r linux-x64
+dotnet restore src/MDel.Api/MDel.Api.csproj -r win-x64 --configfile "$ONLINE_CONFIG"
+dotnet restore src/MDel.Infrastructure/MDel.Infrastructure.csproj -r win-x64 --configfile "$ONLINE_CONFIG"
+dotnet restore src/MDel.Api/MDel.Api.csproj -r linux-x64 --configfile "$ONLINE_CONFIG"
 # efbundle self-contained are nevoie și de runtime pack-urile complete:
 TMP="$(mktemp -d)"
 cat > "$TMP/packs.csproj" <<'XML'
@@ -36,8 +47,8 @@ cat > "$TMP/packs.csproj" <<'XML'
 XML
 EF_VERSION=$(python3 -c "import json;print(json.load(open('$ROOT/backend/dotnet-tools.json'))['tools']['dotnet-ef']['version'])")
 sed -i "s/EF_VERSION/$EF_VERSION/" "$TMP/packs.csproj"
-dotnet restore "$TMP/packs.csproj" -r win-x64
-dotnet restore "$TMP/packs.csproj" -r linux-x64
+dotnet restore "$TMP/packs.csproj" -r win-x64 --configfile "$ONLINE_CONFIG"
+dotnet restore "$TMP/packs.csproj" -r linux-x64 --configfile "$ONLINE_CONFIG"
 rm -rf "$TMP"
 unset NUGET_PACKAGES
 
@@ -47,7 +58,7 @@ find "$OFF/nuget" -type f ! -name '*.nupkg' ! -name '*.nupkg.sha512' ! -name '*.
 
 echo "==> npm (Linux + Windows)"
 cd "$ROOT/frontend"
-npm ci --cache "$OFF/npm-cache" --no-audit --no-fund
+npm ci --cache "$OFF/npm-cache"
 # Dependențele opționale native (esbuild, rollup) diferă pe Windows: le punem și pe ele în cache.
 TMP="$(mktemp -d)"
 cp package.json package-lock.json "$TMP/"

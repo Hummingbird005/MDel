@@ -12,6 +12,12 @@ offline/
 ```
 
 Pachetele sunt în git, deci o simplă copie (sau clonă) a repository-ului ajunge pe mașina offline cu tot cu ele.
+Sursele sunt **deja configurate** în repository, nu trebuie generat nimic:
+
+| Fișier | Ce face |
+|---|---|
+| `backend/NuGet.config` | NuGet folosește doar `offline/nuget` (cale relativă la fișier) |
+| `frontend/.npmrc` | npm folosește cache-ul `offline/npm-cache` (`prefer-offline`) |
 
 ## 1. Pregătirea mașinii offline (o singură dată)
 
@@ -26,28 +32,26 @@ Kiturile de instalare **nu** sunt incluse; instalați-le separat (de pe o mașin
 
 ## 2. Restaurarea dependențelor (fără internet)
 
-Din rădăcina repository-ului:
+Doar comenzile obișnuite:
+
+```bash
+(cd backend  && dotnet restore MDel.slnx && dotnet tool restore)
+(cd frontend && npm ci)
+```
+
+sau, din rădăcina repository-ului, scriptul care face restore + build pentru amândouă:
 
 ```powershell
-# Windows
-.\offline\Restore-Offline.ps1
+.\offline\Restore-Offline.ps1        # Windows
 ```
 
 ```bash
-# Linux / macOS / WSL
-./offline/restore-offline.sh
+./offline/restore-offline.sh         # Linux / macOS / WSL
 ```
-
-Scripturile:
-
-1. creează `backend/NuGet.config` care folosește **doar** `offline/nuget` (cale absolută, ca să funcționeze și
-   `dotnet ef migrations bundle`); fișierul nu se pune în git;
-2. rulează `dotnet restore`, `dotnet tool restore` (aduce `dotnet-ef`) și `dotnet build` pentru backend;
-3. rulează `npm ci --offline --cache offline/npm-cache` și `npm run build` pentru frontend.
 
 ### Manual, pas cu pas
 
-**Backend** (din `backend/`, după ce există `backend/NuGet.config` creat de script):
+**Backend** (din `backend/`):
 
 ```bash
 dotnet restore MDel.slnx
@@ -61,22 +65,22 @@ dotnet ef database update -p src/MDel.Infrastructure -s src/MDel.Api
 **Frontend** (din `frontend/`):
 
 ```bash
-npm ci --offline --cache ../offline/npm-cache
+npm ci             # din offline/npm-cache (frontend/.npmrc); --offline = fără nicio încercare de rețea
 npm run dev        # http://localhost:5173 (proxy /api → backend)
 npm run lint
 npm run build
 ```
 
-**Pachetul de instalare** (offline): `scripts/publish.sh` / `scripts/Publish-MDel.ps1` rulează `npm ci`; setați
-înainte variabilele npm ca să folosească doar cache-ul local:
+**Pachetul de instalare** (offline): `scripts/Publish-MDel.ps1` / `scripts/publish.sh` merg direct; pentru
+`efbundle.exe` setează singure `RestoreConfigFile`. Rulat manual, `dotnet ef migrations bundle` are nevoie de ea, pentru
+că se compilează într-un folder temporar, unde calea relativă din `NuGet.config` nu mai e validă:
 
 ```powershell
-$env:npm_config_offline = 'true'; $env:npm_config_cache = "$PWD\offline\npm-cache"; .\scripts\Publish-MDel.ps1
+$env:RestoreConfigFile = "$PWD\NuGet.config"     # din backend\
+dotnet ef migrations bundle -p src\MDel.Infrastructure -s src\MDel.Api -r win-x64 --self-contained -o efbundle.exe
 ```
 
-```bash
-npm_config_offline=true npm_config_cache="$PWD/offline/npm-cache" ./scripts/publish.sh
-```
+Baza de date nu mai are nevoie de `efbundle` la instalare: aplicația o creează la prima pornire.
 
 ## 3. Rulare locală fără SQL Server, AD sau Exchange
 
@@ -91,12 +95,14 @@ cd ../frontend && npm run dev
 
 ## 4. Dependențe noi
 
-Dacă adăugați sau actualizați un pachet NuGet / npm, pe o mașină **cu internet** (Linux, macOS sau WSL):
+Pe o mașină **cu internet** (Linux, macOS sau WSL), după ce ați adăugat pachetul în `.csproj` / `package.json`:
 
 ```bash
-./offline/create-offline-bundle.sh
+./offline/create-offline-bundle.sh      # descarcă de pe nuget.org / npmjs.org, ignorând NuGet.config din repo
 git add offline && git commit -m "Actualizare pachete offline"
 ```
+
+Pe mașina offline, `dotnet add package` / `npm install <pachet>` funcționează doar pentru pachete deja în `offline/`.
 
 ## 5. Ce NU este inclus
 
@@ -105,7 +111,11 @@ git add offline && git commit -m "Actualizare pachete offline"
   `npx playwright install chromium` (din `frontend/`), apoi copiați `%LOCALAPPDATA%\ms-playwright` (Windows) sau
   `~/.cache/ms-playwright` (Linux) în același loc pe mașina offline. Testele xUnit și build-ul nu au nevoie de ele.
 
-## 6. Revenirea la sursele online
+## 6. Sursele online (opțional)
 
-Ștergeți `backend/NuGet.config` (NuGet revine la nuget.org); pentru npm nu e nimic de schimbat
-(fără `--offline`, npm folosește din nou registry-ul).
+Pentru un restore direct de pe internet, fără `offline/`:
+
+```bash
+dotnet restore MDel.slnx --source https://api.nuget.org/v3/index.json
+npm ci --prefer-online
+```

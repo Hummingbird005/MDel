@@ -39,9 +39,9 @@ backend/                     ASP.NET Core (.NET 10)
   tests/MDel.Tests           xUnit (model EF, API, reguli, notificări, scheduler, audit)
 frontend/                    React + TypeScript (Vite), Tailwind CSS, lucide-react, React Query, i18next (ro/en)
   e2e/                       teste end-to-end Playwright
-scripts/                     rol RBAC Exchange, smoke-test Exchange, publicare (Publish-MDel.ps1 / publish.sh)
+scripts/                     obiecte AD, rol RBAC Exchange, smoke-test Exchange, publicare (Publish-MDel.ps1 / publish.sh)
 offline/                     pachetele NuGet și npm pentru dezvoltare offline + scripturi de restaurare
-docs/                        DEPLOY.md (instalare IIS), UAT.md (checklist de acceptanță), capturi
+docs/                        AD-SETUP.md (pregătire AD), DEPLOY.md (instalare IIS), UAT.md (checklist), capturi
 ```
 
 ## Baza de date (EF Core, code-first)
@@ -76,8 +76,10 @@ dotnet ef database update -p src/MDel.Infrastructure -s src/MDel.Api
 `dotnet ef` citește connection string-ul `MDel` din `src/MDel.Api/appsettings.Development.json`
 (sau `appsettings.{ASPNETCORE_ENVIRONMENT}.json`); variabila `MDEL_CONNECTION_STRING` are prioritate.
 
-Migrările sunt deja generate. Pentru un server de producție
-fără acces direct se poate genera scriptul SQL idempotent:
+**La pornire, aplicația creează singură baza** în SQL Server (dacă nu există) și aplică migrările neaplicate
+(`Setup:MigrateDatabaseOnStartup`, implicit `true`), deci pe un server nou nu e nevoie de `database update`.
+Pentru un DBA care preferă să aplice el structura (`MigrateDatabaseOnStartup = false`) se poate genera scriptul
+SQL idempotent:
 
 ```bash
 dotnet ef migrations script --idempotent -p src/MDel.Infrastructure -s src/MDel.Api -o mdel.sql
@@ -89,9 +91,12 @@ Cerințe: .NET 10 SDK, Node 22, SQL Server.
 
 1. Setați connection string-ul în `backend/src/MDel.Api/appsettings.Development.json`
    (sau cu `dotnet user-secrets set "ConnectionStrings:MDel" "..."`).
-2. `cd backend && dotnet tool restore && dotnet ef database update -p src/MDel.Infrastructure -s src/MDel.Api`
-3. `dotnet run --project src/MDel.Api` (http://localhost:5080)
-4. `cd frontend && npm install && npm run dev` (http://localhost:5173, proxy `/api` → 5080)
+2. `cd backend && dotnet restore MDel.slnx && dotnet run --project src/MDel.Api` (http://localhost:5080) – la pornire
+   se creează baza și se aplică migrările (sau manual: `dotnet tool restore && dotnet ef database update -p src/MDel.Infrastructure -s src/MDel.Api`)
+3. `cd frontend && npm ci && npm run dev` (http://localhost:5173, proxy `/api` → 5080)
+
+Pachetele NuGet și npm se iau din `offline/` (`backend/NuGet.config`, `frontend/.npmrc`), deci restore-ul merge și
+fără internet. O dependență nouă se adaugă cu `offline/create-offline-bundle.sh` (vezi [offline/README.md](offline/README.md)).
 
 În **Development**, autentificarea este simulată (`Authentication:Mode = Development`):
 utilizatorul și grupurile AD vin din `appsettings.Development.json`, iar headerul `X-Dev-User`
@@ -177,13 +182,15 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 
 - Producție: Windows Authentication (Negotiate/Kerberos) pe IIS – vezi `web.config`.
 - Rolurile `Admin` și `Approver` se obțin din grupurile AD configurate în `AppSettings`
-  (`Groups.Admins`, `Groups.Approvers`). Cât timp acestea sunt goale, se folosesc valorile din
-  `appsettings.json` (`Authentication:Groups`) – pentru primul acces al adminului.
+  (`Groups.Admins`, `Groups.Approvers`).
+- **Prima pornire:** conturile din `Setup:InitialAdmins` (`appsettings.json`) sunt administratori indiferent de grupuri
+  (adminul inițial, se conectează tot cu Windows). `Setup:InitialSettings` completează setările goale (AD, grupuri,
+  adresa aplicației). Pregătirea AD: [docs/AD-SETUP.md](docs/AD-SETUP.md) și `scripts/New-MDelAdObjects.ps1`.
 
 ## Teste
 
 ```bash
-cd backend && dotnet test MDel.slnx          # 118 teste: model EF, API, reguli, notificări, scheduler, audit
+cd backend && dotnet test MDel.slnx          # 128 de teste: model EF, API, reguli, notificări, scheduler, audit
 cd frontend && npm run lint && npm run build
 cd frontend && npm run e2e                   # Playwright: pornește backend-ul (in-memory) și Vite
 ```
@@ -193,12 +200,15 @@ CI-ul (GitHub Actions) rulează toate trei; la merge în `main` produce pachetul
 
 ## Dezvoltare offline
 
-Toate pachetele NuGet și npm sunt în repository, în `offline/` (~350 MB). Pe o mașină fără internet, cu .NET 10 SDK
-și Node.js 22 instalate, restaurarea se face cu `offline/Restore-Offline.ps1` (Windows) sau `offline/restore-offline.sh`.
+Toate pachetele NuGet și npm sunt în repository, în `offline/` (~350 MB), iar sursele sunt deja configurate
+(`backend/NuGet.config` → `offline/nuget`, `frontend/.npmrc` → `offline/npm-cache`). Pe o mașină fără internet, cu
+.NET 10 SDK și Node.js 22 instalate, e suficient `dotnet restore MDel.slnx` (în `backend/`) și `npm ci` (în `frontend/`),
+sau scriptul `offline/Restore-Offline.ps1` / `offline/restore-offline.sh`, care face și build-ul.
 Detalii: [offline/README.md](offline/README.md).
 
 ## Instalare în producție
 
-Vezi [docs/DEPLOY.md](docs/DEPLOY.md) (IIS, SQL Server, Exchange, configurare, operare) și
+Întâi [docs/AD-SETUP.md](docs/AD-SETUP.md) (cont de serviciu, grupuri, SPN-uri, drepturi SQL, admin inițial), apoi
+[docs/DEPLOY.md](docs/DEPLOY.md) (IIS, SQL Server, Exchange, configurare, operare) și
 [docs/UAT.md](docs/UAT.md) (checklist de acceptanță pe mediul de test). Pachetul se construiește cu
 `scripts/Publish-MDel.ps1` (Windows) sau `scripts/publish.sh`.

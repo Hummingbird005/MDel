@@ -26,8 +26,12 @@ Push-Location (Join-Path $root 'backend')
 dotnet tool restore; if ($LASTEXITCODE) { throw 'tool restore failed' }
 dotnet publish src\MDel.Api\MDel.Api.csproj -c Release -r win-x64 --self-contained false -o (Join-Path $out 'MDel')
 if ($LASTEXITCODE) { throw 'publish failed' }
+# efbundle se compilează într-un folder temporar; RestoreConfigFile îl face să folosească tot offline\nuget.
+$env:RestoreConfigFile = Join-Path $root 'backend\NuGet.config'
 dotnet ef migrations bundle -p src\MDel.Infrastructure -s src\MDel.Api --configuration Release -r win-x64 --self-contained -o (Join-Path $out 'efbundle.exe') --force
-if ($LASTEXITCODE) { throw 'migrations bundle failed' }
+$bundleExit = $LASTEXITCODE
+Remove-Item Env:RestoreConfigFile
+if ($bundleExit) { throw 'migrations bundle failed' }
 dotnet ef migrations script --idempotent -p src\MDel.Infrastructure -s src\MDel.Api -o (Join-Path $out 'mdel-migrations.sql')
 if ($LASTEXITCODE) { throw 'migrations script failed' }
 Pop-Location

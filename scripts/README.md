@@ -1,6 +1,19 @@
-# Scripturi Exchange pentru MDel
+# Scripturi AD și Exchange pentru MDel
 
 Scripturile se rulează pe un server sau o stație din domeniu, în **Windows PowerShell 5.1**.
+
+## 0. Obiectele AD (înainte de prima pornire)
+
+```powershell
+# modulul ActiveDirectory (RSAT); din Exchange Management Shell dacă folosiți -MailEnableGroups
+.\New-MDelAdObjects.ps1 -OrganizationalUnit 'OU=MDel,DC=contoso,DC=local' -AppHostName mdel.contoso.local `
+    -AdminMembers ion.popescu -ApproverMembers dan.georgescu -MailEnableGroups -WhatIf
+```
+
+Creează (doar ce lipsește) contul de serviciu `svc-mdel`, grupurile `MDel-Admins` / `MDel-Approvers` cu membrii,
+SPN-urile `HTTP/<AppHostName>` și, cu `-MailEnableGroups`, adresele de email ale grupurilor. La final afișează
+secțiunea `Setup` pentru `appsettings.json` (adminul inițial + setările AD). Fără `-WhatIf` aplică modificările.
+Detalii: [docs/AD-SETUP.md](../docs/AD-SETUP.md).
 
 ## 1. Rol RBAC minim pentru contul de serviciu
 
