@@ -26,7 +26,10 @@ public sealed class AuditController(AuditQueryService audit) : ControllerBase
         public int Page { get; init; } = 1;
         public int PageSize { get; init; } = 50;
 
-        public AuditQuery ToQuery() => new(From, To, User, Action, EntityType, EntityId, Result, Search, Page, PageSize);
+        /// <summary>Include și apelurile HTTP reușite (implicit ascunse: acțiunea de business are deja valorile).</summary>
+        public bool IncludeHttp { get; init; }
+
+        public AuditQuery ToQuery() => new(From, To, User, Action, EntityType, EntityId, Result, Search, Page, PageSize, IncludeHttp);
     }
 
     [HttpGet]

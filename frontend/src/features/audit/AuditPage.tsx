@@ -9,9 +9,10 @@ import { Alert, Card, EmptyState, IconButton, inputClass, Spinner } from '../../
 import { cx } from '../../lib/cx'
 import { formatDateTime } from '../../lib/format'
 import { Pager } from '../delegations/DelegationTable'
+import { fieldChanges, summarize } from './auditFormat'
 
 const PAGE_SIZE = 50
-const filterKeys = ['from', 'to', 'user', 'action', 'entityType', 'entityId', 'result', 'search'] as const
+const filterKeys = ['from', 'to', 'user', 'action', 'entityType', 'entityId', 'result', 'search', 'includeHttp'] as const
 
 /** Eticheta acțiunii în limba curentă; codul tehnic rămâne vizibil ca tooltip. */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -139,6 +140,18 @@ export function AuditPage() {
           <FilterField id="audit-search" label={t('audit.search')}>
             <input id="audit-search" className={inputClass(false, 'h-9')} value={searchInput} placeholder={t('audit.searchPlaceholder')} onChange={(e) => setSearchInput(e.target.value)} />
           </FilterField>
+          <div className="flex items-center gap-2 text-sm sm:col-span-2 xl:col-span-6">
+            <input
+              id="audit-http"
+              type="checkbox"
+              className="h-4 w-4 rounded border-line accent-accent"
+              checked={filters.includeHttp === 'true'}
+              onChange={(e) => setFilter('includeHttp', e.target.checked ? 'true' : '')}
+            />
+            <label htmlFor="audit-http" className="text-muted">
+              {t('audit.showHttp')}
+            </label>
+          </div>
           {(filters.entityType || hasFilters) && (
             <div className="flex flex-wrap items-center gap-2 text-sm sm:col-span-2 xl:col-span-6">
               {filters.entityType && (
@@ -182,17 +195,21 @@ export function AuditPage() {
           <EmptyState icon={<History size={26} />} title={t('audit.empty')} text={t('table.emptyHint')} />
         ) : (
           <div className="relative overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[960px] table-fixed text-left text-sm">
+              <colgroup>
+                <col className="w-[168px]" />
+                <col className="w-[190px]" />
+                <col className="w-[200px]" />
+                <col className="w-[96px]" />
+                <col />
+              </colgroup>
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-muted">
                   <th className="px-3 py-2.5 font-medium">{t('audit.when')}</th>
                   <th className="px-3 py-2.5 font-medium">{t('audit.user')}</th>
                   <th className="px-3 py-2.5 font-medium">{t('audit.action')}</th>
-                  <th className="px-3 py-2.5 font-medium">{t('audit.target')}</th>
                   <th className="px-3 py-2.5 font-medium">{t('audit.result')}</th>
-                  <th className="px-3 py-2.5 font-medium">
-                    <span className="sr-only">{t('audit.details')}</span>
-                  </th>
+                  <th className="px-3 py-2.5 font-medium">{t('audit.whatHappened')}</th>
                 </tr>
               </thead>
               <tbody className={cx('divide-y divide-line border-t border-line', list.isFetching && 'opacity-60')}>
@@ -227,6 +244,7 @@ function FilterField({ id, label, children }: { id: string; label: string; child
 function Row({ item: a, onOpen }: { item: AuditItem; onOpen: () => void }) {
   const { t } = useTranslation()
   const label = useActionLabel()
+  const summary = summarize(t, a)
   const target =
     a.entityType === 'Delegation' && a.entityId ? (
       <Link to={`/delegations/${a.entityId}`} onClick={(e) => e.stopPropagation()} className="font-medium text-accent-text hover:underline">
@@ -254,38 +272,32 @@ function Row({ item: a, onOpen }: { item: AuditItem; onOpen: () => void }) {
         </div>
       </td>
       <td className="px-3 py-2.5" title={a.action}>
-        {label(a.action)}
-      </td>
-      <td className="px-3 py-2.5">
-        {target}
+        <p>{label(a.action)}</p>
+        {/* Ținta sub acțiune (nu coloană separată): lasă loc rezumatului. Apelurile HTTP o au deja în detalii. */}
+        {a.action !== 'Http.Request' && target !== '–' && <p className="mt-0.5 text-xs text-muted">{target}</p>}
       </td>
       <td className="px-3 py-2.5">
         <span className={cx('whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset', resultStyle[a.result])}>
           {t(`audit.results.${a.result}`)}
         </span>
       </td>
-      <td className="max-w-[320px] px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          {a.hasChanges && <FileDiff size={14} className="shrink-0 text-accent-text" aria-label={t('audit.hasChanges')} />}
-          <span className="truncate text-muted">{a.details}</span>
+      <td className="px-3 py-2.5">
+        <div className="flex items-start gap-2">
+          {a.hasChanges && <FileDiff size={14} className="mt-0.5 shrink-0 text-accent-text" aria-label={t('audit.hasChanges')} />}
+          <div className="min-w-0 leading-snug">
+            {summary && <p className="line-clamp-4 break-words" title={summary}>{summary}</p>}
+            {a.details && (
+              <p className={cx('line-clamp-2 break-words text-xs', a.result === 'Success' ? 'text-muted' : 'text-danger')} title={a.details}>
+                {a.result !== 'Success' && !a.path && `${t('audit.reason')}: `}
+                {a.details}
+              </p>
+            )}
+          </div>
         </div>
       </td>
     </tr>
   )
 }
-
-/** Valori vechi / noi, câmp cu câmp; cele modificate sunt evidențiate. */
-function parse(json: string | null): Record<string, unknown> | null {
-  if (!json) return null
-  try {
-    const v = JSON.parse(json)
-    return v && typeof v === 'object' && !Array.isArray(v) ? v : { value: v }
-  } catch {
-    return { value: json }
-  }
-}
-
-const show = (v: unknown) => (v === undefined ? '' : v === null ? '–' : typeof v === 'object' ? JSON.stringify(v) : String(v))
 
 function AuditDetailPanel({ id, onClose }: { id: number; onClose: () => void }) {
   const { t } = useTranslation()
@@ -298,10 +310,15 @@ function AuditDetailPanel({ id, onClose }: { id: number; onClose: () => void }) 
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const [showUnchanged, setShowUnchanged] = useState(false)
   const d: AuditDetail | undefined = query.data
-  const oldV = parse(d?.oldValues ?? null)
-  const newV = parse(d?.newValues ?? null)
-  const keys = Array.from(new Set([...Object.keys(oldV ?? {}), ...Object.keys(newV ?? {})]))
+  const fields = d ? fieldChanges(t, d.action, d.oldValues, d.newValues) : []
+  const hasBefore = !!d?.oldValues
+  const comparing = hasBefore && !!d?.newValues
+  // La modificare se arată doar ce s-a schimbat (restul, la cerere); la creare / refuz, tot ce s-a introdus.
+  const rows = comparing && !showUnchanged ? fields.filter((f) => f.changed) : fields
+  const unchanged = fields.length - fields.filter((f) => f.changed).length
+  const afterHeader = d?.action.endsWith('Failed') ? t('audit.attempted') : t('audit.newValue')
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={t('audit.details')}>
@@ -371,31 +388,45 @@ function AuditDetailPanel({ id, onClose }: { id: number; onClose: () => void }) 
               )}
             </dl>
 
-            {keys.length > 0 && (
-              <div className="overflow-x-auto rounded-lg ring-1 ring-line">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-subtle text-muted">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">{t('audit.field')}</th>
-                      <th className="px-3 py-2 font-medium">{t('audit.oldValue')}</th>
-                      <th className="px-3 py-2 font-medium">{t('audit.newValue')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {keys.map((k) => {
-                      const before = show(oldV?.[k])
-                      const after = show(newV?.[k])
-                      const changed = oldV && newV && before !== after
-                      return (
-                        <tr key={k} className={changed ? 'bg-warning/5' : undefined}>
-                          <td className="px-3 py-2 font-mono">{k}</td>
-                          <td className={cx('break-all px-3 py-2', changed && 'text-danger line-through decoration-danger/40')}>{before}</td>
-                          <td className={cx('break-all px-3 py-2', changed && 'font-medium text-success')}>{after}</td>
+            {fields.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <div className="overflow-x-auto rounded-lg ring-1 ring-line">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-subtle text-muted">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">{t('audit.field')}</th>
+                        {hasBefore && <th className="px-3 py-2 font-medium">{t('audit.oldValue')}</th>}
+                        <th className="px-3 py-2 font-medium">{afterHeader}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {rows.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="px-3 py-3 text-muted">
+                            {t('audit.noChanges')}
+                          </td>
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      )}
+                      {rows.map((f) => (
+                        <tr key={f.key} className={f.changed ? 'bg-warning/5' : undefined}>
+                          <td className="px-3 py-2 align-top">
+                            <p className="font-medium">{f.label}</p>
+                            {f.label !== f.key && <p className="font-mono text-[10px] text-muted">{f.key}</p>}
+                          </td>
+                          {hasBefore && (
+                            <td className={cx('whitespace-pre-wrap break-words px-3 py-2 align-top', f.changed && 'text-danger line-through decoration-danger/40')}>{f.before}</td>
+                          )}
+                          <td className={cx('whitespace-pre-wrap break-words px-3 py-2 align-top', f.changed && 'font-medium text-success')}>{f.after}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {comparing && unchanged > 0 && (
+                  <button type="button" className="w-fit text-xs font-medium text-accent-text hover:underline" onClick={() => setShowUnchanged((v) => !v)}>
+                    {showUnchanged ? t('audit.hideUnchanged') : t('audit.showUnchanged', { count: unchanged })}
+                  </button>
+                )}
               </div>
             )}
           </div>

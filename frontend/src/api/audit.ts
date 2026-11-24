@@ -17,12 +17,12 @@ export interface AuditItem {
   ipAddress: string | null
   result: AuditResult
   hasChanges: boolean
+  oldValues: string | null
+  newValues: string | null
 }
 
 export interface AuditDetail extends Omit<AuditItem, 'hasChanges'> {
   correlationId: string | null
-  oldValues: string | null
-  newValues: string | null
 }
 
 export interface AuditFilters {
@@ -34,6 +34,8 @@ export interface AuditFilters {
   entityId?: string
   result?: AuditResult | ''
   search?: string
+  /** „true” = și apelurile HTTP reușite (implicit ascunse). */
+  includeHttp?: string
 }
 
 const query = (f: AuditFilters, page?: number, pageSize?: number) => {
