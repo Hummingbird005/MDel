@@ -50,18 +50,26 @@ public static class DependencyInjection
 
         services.Configure<ActiveDirectoryOptions>(configuration.GetSection(ActiveDirectoryOptions.SectionName));
 
-        if (configuration.GetValue("Integrations:UseFakes", false))
-        {
+        // Integrations:UseFakes = true (Development) înlocuiește AD, Exchange și SMTP cu implementări in-memory.
+        // Fiecare se poate alege separat: Integrations:FakeDirectory / FakeExchange / FakeMail.
+        // Secțiunea ActiveDirectory activată (Enabled = true) înseamnă AD real, chiar și cu UseFakes.
+        var useFakes = configuration.GetValue("Integrations:UseFakes", false);
+        var adFromAppSettings = configuration.GetValue($"{ActiveDirectoryOptions.SectionName}:Enabled", false);
+
+        if (configuration.GetValue("Integrations:FakeDirectory", useFakes && !adFromAppSettings))
             services.AddSingleton<IDirectoryService, FakeDirectoryService>();
-            services.AddSingleton<IExchangeService, FakeExchangeService>();
-            services.AddSingleton<IMailService, FakeMailService>();
-        }
         else
-        {
             services.AddSingleton<IDirectoryService, LdapDirectoryService>();
+
+        if (configuration.GetValue("Integrations:FakeExchange", useFakes))
+            services.AddSingleton<IExchangeService, FakeExchangeService>();
+        else
             services.AddSingleton<IExchangeService, ExchangePowerShellService>();
+
+        if (configuration.GetValue("Integrations:FakeMail", useFakes))
+            services.AddSingleton<IMailService, FakeMailService>();
+        else
             services.AddSingleton<IMailService, SmtpMailService>();
-        }
 
         return services;
     }

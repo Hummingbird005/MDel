@@ -41,7 +41,7 @@ frontend/                    React + TypeScript (Vite), Tailwind CSS, lucide-rea
   e2e/                       teste end-to-end Playwright
 scripts/                     obiecte AD, rol RBAC Exchange, smoke-test Exchange, publicare (Publish-MDel.ps1 / publish.sh)
 offline/                     pachetele NuGet și npm pentru dezvoltare offline + scripturi de restaurare
-docs/                        AD-SETUP.md (pregătire AD), DEPLOY.md (instalare IIS), UAT.md (checklist), capturi
+docs/                        LOCAL-RUN.md (rulare locală), AD-SETUP.md, DEPLOY.md (IIS), UAT.md (checklist), capturi
 ```
 
 ## Baza de date (EF Core, code-first)
@@ -87,10 +87,12 @@ dotnet ef migrations script --idempotent -p src/MDel.Infrastructure -s src/MDel.
 
 ## Rulare locală
 
-Cerințe: .NET 10 SDK, Node 22, SQL Server.
+Pas cu pas, cu backend-ul din Visual Studio și frontend-ul din cmd: **[docs/LOCAL-RUN.md](docs/LOCAL-RUN.md)**.
 
-1. Setați connection string-ul în `backend/src/MDel.Api/appsettings.Development.json`
-   (sau cu `dotnet user-secrets set "ConnectionStrings:MDel" "..."`).
+Cerințe: .NET 10 SDK, Node 22, SQL Server (implicit LocalDB, din Visual Studio).
+
+1. `backend/src/MDel.Api/appsettings.Development.json`: connection string (implicit LocalDB `MDel_Dev`), utilizatorul
+   simulat, opțional AD real (`ActiveDirectory`) și setările inițiale.
 2. `cd backend && dotnet restore MDel.slnx && dotnet run --project src/MDel.Api` (http://localhost:5080) – la pornire
    se creează baza și se aplică migrările (sau manual: `dotnet tool restore && dotnet ef database update -p src/MDel.Infrastructure -s src/MDel.Api`)
 3. `cd frontend && npm ci && npm run dev` (http://localhost:5173, proxy `/api` → 5080)
@@ -99,9 +101,11 @@ Pachetele NuGet și npm se iau din `offline/` (`backend/NuGet.config`, `frontend
 fără internet. O dependență nouă se adaugă cu `offline/create-offline-bundle.sh` (vezi [offline/README.md](offline/README.md)).
 
 În **Development**, autentificarea este simulată (`Authentication:Mode = Development`):
-utilizatorul și grupurile AD vin din `appsettings.Development.json`, iar headerul `X-Dev-User`
-și `X-Dev-Groups` (listă separată prin virgulă sau `none`) permit schimbarea utilizatorului și a grupurilor.
-AD, Exchange și SMTP sunt înlocuite de implementări in-memory (`Integrations:UseFakes = true`).
+utilizatorul și grupurile AD vin din `appsettings.Development.json`. Din browser, utilizatorul se schimbă cu
+`/api/dev/login-as?user=dan.georgescu&groups=MDel-Approvers` (fără parametri = înapoi la cel din fișier); în teste,
+cu headerele `X-Dev-User` și `X-Dev-Groups` (listă separată prin virgulă sau `none`).
+`Integrations:UseFakes = true` înlocuiește AD, Exchange și SMTP cu implementări in-memory; separat:
+`Integrations:FakeDirectory` / `FakeExchange` / `FakeMail`. Secțiunea `ActiveDirectory` activată folosește mereu AD-ul real.
 
 Pentru a încerca interfața **fără SQL Server**: `Database__UseInMemory=true dotnet run --project src/MDel.Api`
 (bază in-memory, doar în Development; datele se pierd la oprire). Setați apoi calea de fișiere în
@@ -193,7 +197,7 @@ Un serviciu de fundal (`SchedulerHostedService`) rulează la fiecare `Scheduler:
 ## Teste
 
 ```bash
-cd backend && dotnet test MDel.slnx          # 149 de teste: model EF, API, reguli, notificări, scheduler, audit
+cd backend && dotnet test MDel.slnx          # 153 de teste: model EF, API, reguli, notificări, scheduler, audit
 cd frontend && npm run lint && npm run build
 cd frontend && npm run e2e                   # Playwright: pornește backend-ul (in-memory) și Vite
 ```
